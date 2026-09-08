@@ -1,0 +1,12 @@
+# Vercel
+.vercel
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor directories
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GiftList & WishList Maker - Smart Event Budgeting & Gift Registry</title>
+  <meta name="description" content="Plan events, manage recipient budgets, and curate candidate gifts from Amazon, eBay, and top retailers with GiftList & WishList Maker for Android." />
+  <meta name="keywords" content="gift list maker, wishlist app, event budget planner, holiday gift list, amazon gift ideas, ebay gift recommendations, recipient gift tracker" />
+  <meta property="og:title" content="GiftList & WishList Maker - Smart Event Budgeting & Gift Registry" />
+  <meta property="og:description" content="The intuitive mobile app to organize gift ideas, compare prices, and keep your holiday and birthday budgets on track." />
+  <meta property="og:type" content="website" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="/" class="brand">
+        <div class="brand-icon">🎁</div>
+        <span>GiftList & WishList Maker</span>
+      </a>
+
+      <button class="menu-toggle" aria-label="Toggle navigation menu">☰</button>
+
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#guide">Gift Guide</a></li>
+        <li><a href="#how-it-works">How It Works</a></li>
+        <li><a href="#faq">FAQ</a></li>
+        <li><a href="disclosure">Affiliate Disclosure</a></li>
+        <li><a href="contact" class="btn btn-secondary">Support</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span>✨</span> Smart Event & Gift Companion for Android
+        </div>
+        <h1>Plan Events. Track Budgets. <span>Pick Perfect Gifts.</span></h1>
+        <p class="hero-lead">
+          Stop juggling messy spreadsheets and forgotten bookmarks. GiftList & WishList Maker helps you gather candidate gift items from web stores, compare prices, manage budgets per recipient, and streamline holiday shopping in one place.
+        </p>
+
+        <div class="hero-actions">
+          <div class="play-badge-link">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3.609 1.814L13.792 12 3.61 22.186a2.03 2.03 0 0 1-.61-1.464V3.278c0-.568.225-1.1.609-1.464zm11.24 11.242l2.368 2.368-12.01 6.84 9.642-9.208zm0-2.112L5.207 1.736l12.01 6.84-2.368 2.368zm1.488 1.056l3.352 1.91c.783.446.783 1.176 0 1.622l-3.352 1.91-2.124-2.124 2.124-2.318z"/>
+            </svg>
+            <div>
+              <div class="badge-sub">Available on</div>
+              <div class="badge-main">Google Play (Preview)</div>
+            </div>
+          </div>
+          <a href="#features" class="btn btn-secondary">Learn More</a>
+        </div>
+        <p style="font-size: 0.8rem; color: #64748b;">* Private, offline-first storage. No account or password required.</p>
+      </div>
+
+      <!-- App Interface Preview Card -->
+      <div class="hero-visual">
+        <div class="app-mockup-card">
+          <div class="mockup-header">
+            <div class="mockup-dots">
+              <span class="mockup-dot"></span>
+              <span class="mockup-dot"></span>
+              <span class="mockup-dot"></span>
+            </div>
+            <span style="font-size: 0.8rem; font-weight: 700; color: #4f46e5;">GiftList & WishList Maker</span>
+          </div>
+
+          <div class="mockup-event-banner">
+            <h4>🎄 Holidays & Christmas 2026</h4>
+            <div class="mockup-event-stats">
+              <span>Allocated: $1,000.00</span>
+              <span>Remaining: $645.00</span>
+            </div>
+          </div>
+
+          <div style="font-size: 0.8rem; font-weight: 700; color: #64748b; margin-bottom: 8px;">
+            RECENT CANDIDATE GIFTS
+          </div>
+
+          <div class="mockup-item-row">
+            <div class="mockup-item-img">🎧</div>
+            <div class="mockup-item-info">
+              <div class="mockup-item-title">Wireless ANC Headphones</div>
+              <div class="mockup-item-meta">Store: Amazon • Recipient: Alex</div>
+            </div>
+            <div class="mockup-item-price">$129.99</div>
+          </div>
+
+          <div class="mockup-item-row">
+            <div class="mockup-item-img">☕</div>
+            <div class="mockup-item-info">
+              <div class="mockup-item-title">Artisan Pour-Over Set</div>
+              <div class="mockup-item-meta">Store: eBay • Recipient: Sarah</div>
+            </div>
+            <div class="mockup-item-price">$45.00</div>
+          </div>
+
+          <div class="mockup-item-row">
+            <div class="mockup-item-img">🎮</div>
+            <div class="mockup-item-info">
+              <div class="mockup-item-title">Retro Handheld Console</div>
+              <div class="mockup-item-meta">Store: Web Store • Recipient: Michael</div>
+            </div>
+            <div class="mockup-item-price">$79.99</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Core Features Section -->
+  <section id="features" class="section section-alt">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Powerful Features</span>
+        <h2 class="section-title">Everything You Need for Thoughtful Gifting</h2>
+        <p class="section-subtitle">Designed from the ground up to reduce holiday stress, prevent overspending, and ensure everyone receives a gift they love.</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap">📊</div>
+          <h3>Multi-Event Budget Tracker</h3>
+          <p>Create unlimited events (Christmas, Birthdays, Anniversaries). Set overall event budgets and sub-budgets per recipient with real-time remaining balance calculations.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🔗</div>
+          <h3>Universal Link Scraping</h3>
+          <p>Share product URLs directly from your browser or apps like Amazon and eBay. The app automatically extracts product title, image, and price into neat gift cards.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">⚖️</div>
+          <h3>Candidate Comparison</h3>
+          <p>Collect multiple candidate gift ideas for each person. Compare specs and prices side-by-side before deciding on the final item to purchase.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">👥</div>
+          <h3>Unified Recipient Registry</h3>
+          <p>Manage all your family members and friends globally. View their event participation history, past gifts received, and preferences in one central screen.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🔒</div>
+          <h3>100% Private & Offline</h3>
+          <p>Your gift ideas and financial budget details are stored securely on your own device using Room Database. No forced sign-ups, no data harvesting.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon-wrap">🛍️</div>
+          <h3>Gifts Hub & Purchase Flow</h3>
+          <p>Segregate unassigned items from confirmed "Gifts to Buy". Once an idea is approved, easily open the store link directly to complete your purchase.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Editorial Curated Gift Ideas Section (Crucial for Amazon Associates & EPN Editorial Compliance) -->
+  <section id="guide" class="section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Curated Gift Guide</span>
+        <h2 class="section-title">Inspiration for Your Next Event</h2>
+        <p class="section-subtitle">Explore sample gift recommendations that seamlessly integrate with GiftList & WishList Maker's link capture and comparison tools.</p>
+      </div>
+
+      <div class="guide-grid">
+        <!-- Card 1 -->
+        <div class="guide-card">
+          <div class="guide-img-box">
+            <span class="guide-badge-top">Tech & Gadgets</span>
+            🎧
+          </div>
+          <div class="guide-body">
+            <span class="guide-store-badge badge-amazon">Amazon Selection</span>
+            <h3 class="guide-title">Active Noise Cancelling Wireless Headphones</h3>
+            <p class="guide-desc">Perfect for commuters, students, and frequent flyers seeking high-fidelity audio and long battery life.</p>
+            <div class="guide-footer">
+              <div>
+                <span class="guide-price">~$129.99</span>
+                <span class="guide-price-note">*Price subject to change</span>
+              </div>
+              <a href="disclosure" style="font-size: 0.8rem; font-weight: 600;">Details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="guide-card">
+          <div class="guide-img-box">
+            <span class="guide-badge-top">Kitchen & Home</span>
+            ☕
+          </div>
+          <div class="guide-body">
+            <span class="guide-store-badge badge-ebay">eBay Marketplace</span>
+            <h3 class="guide-title">Artisan Ceramic Pour-Over Coffee Dripper Set</h3>
+            <p class="guide-desc">Handcrafted ceramic brewer with heat-resistant glass carafe. An ideal gift for coffee lovers who appreciate slow morning brewing.</p>
+            <div class="guide-footer">
+              <div>
+                <span class="guide-price">~$45.00</span>
+                <span class="guide-price-note">*Price subject to change</span>
+              </div>
+              <a href="disclosure" style="font-size: 0.8rem; font-weight: 600;">Details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="guide-card">
+          <div class="guide-img-box">
+            <span class="guide-badge-top">Smart Home</span>
+            💡
+          </div>
+          <div class="guide-body">
+            <span class="guide-store-badge badge-amazon">Amazon Selection</span>
+            <h3 class="guide-title">Smart Ambient Sunrise Wake-Up Alarm Lamp</h3>
+            <p class="guide-desc">Simulates a natural sunrise with customizable RGB colors, relaxing soundscapes, and bedside touch controls.</p>
+            <div class="guide-footer">
+              <div>
+                <span class="guide-price">~$39.99</span>
+                <span class="guide-price-note">*Price subject to change</span>
+              </div>
+              <a href="disclosure" style="font-size: 0.8rem; font-weight: 600;">Details →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="guide-card">
+          <div class="guide-img-box">
+            <span class="guide-badge-top">Keepsake</span>
+            📖
+          </div>
+          <div class="guide-body">
+            <span class="guide-store-badge badge-ebay">eBay Marketplace</span>
+            <h3 class="guide-title">Refillable Vintage Leather Writing Journal</h3>
+            <p class="guide-desc">Genuine full-grain leather bound notebook with archival-quality cotton parchment paper for writers, artists, and planners.</p>
+            <div class="guide-footer">
+              <div>
+                <span class="guide-price">~$28.50</span>
+                <span class="guide-price-note">*Price subject to change</span>
+              </div>
+              <a href="disclosure" style="font-size: 0.8rem; font-weight: 600;">Details →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compliance Pricing Notice -->
+      <div class="compliance-box">
+        <strong>Product Pricing & Availability Notice:</strong> Product prices and availability displayed on this site and within the application are accurate as of the date/time indicated and are subject to change. Any price and availability information displayed on merchant websites (including Amazon.com and eBay.com) at the time of purchase will apply to the purchase of these products.
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section id="how-it-works" class="section section-alt">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Simple Workflow</span>
+        <h2 class="section-title">How GiftList & WishList Maker Works</h2>
+        <p class="section-subtitle">Three intuitive steps to take you from brainstorm to wrapped gifts without exceeding your budget.</p>
+      </div>
+
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Setup Events & Budget</h3>
+          <p>Create an event such as "Family Christmas" or "Birthday Bash". Add your recipients and assign individual spending targets.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>Browse & Collect Candidates</h3>
+          <p>Surf online stores. Whenever you spot a potential gift on Amazon, eBay, or other web stores, share the link into the app to grab its image, title, and current price.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>Compare & Purchase</h3>
+          <p>Review candidate items side-by-side. Mark the winning choice as "Gifts to Buy", archive extra ideas, and tap directly through to the merchant to order.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section id="faq" class="section">
+    <div class="container">
+      <div class="section-title-wrap">
+        <span class="section-tag">Got Questions?</span>
+        <h2 class="section-title">Frequently Asked Questions</h2>
+        <p class="section-subtitle">Everything you need to know about GiftList & WishList Maker, privacy, and retail integrations.</p>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Is GiftList & WishList Maker free to use?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            Yes! The app provides complete event budget planning, recipient tracking, and candidate gift organization completely free.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How does the product link fetcher work?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            When you enter or share a product URL into the app, our metadata service parses the webpage's open graph meta tags and product schema to extract the official title, thumbnail image, store name, and price, formatting them into an easy-to-read candidate card.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>Is my personal budget and recipient information secure?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            Absolutely. GiftList & WishList Maker operates with a local-first philosophy. Your event names, recipient budgets, and gift candidate lists are stored in a private SQLite database directly on your device. We do not sell your personal shopping data.
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question">
+            <span>How do affiliate links support the app?</span>
+            <span class="faq-chevron">▼</span>
+          </button>
+          <div class="faq-answer">
+            When you click on merchant product links (such as Amazon or eBay) to complete a purchase, we may earn a small affiliate commission at absolutely no additional cost to you. This enables us to maintain and continuously improve the app.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer with Mandatory Amazon & eBay Disclaimers -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>🎁 GiftList & WishList Maker</h3>
+          <p>The premier Android companion for organizing gift registries, managing holiday budgets, and comparing candidate items from leading web stores.</p>
+          <p style="margin-top: 12px; font-size: 0.85rem; color: #94a3b8;">
+            Developer: <strong>MZ Developers</strong><br />
+            Email: <a href="mailto:mzdevelopers001@gmail.com" style="color: #38bdf8;">mzdevelopers001@gmail.com</a>
+          </p>
+        </div>
+
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="#features">App Features</a></li>
+            <li><a href="#guide">Curated Gift Guide</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Legal & Policies</h4>
+          <ul>
+            <li><a href="privacy">Privacy Policy</a></li>
+            <li><a href="terms">Terms of Service</a></li>
+            <li><a href="disclosure">Affiliate Disclosure</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="contact">Contact Support</a></li>
+            <li><a href="mailto:mzdevelopers001@gmail.com">Developer Inquiries</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Mandatory Affiliate Compliance Statements -->
+      <div class="footer-disclaimer-panel">
+        <p>
+          <strong>Amazon Associates Program Disclosure:</strong> GiftList & WishList Maker is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites and apps to earn advertising fees by advertising and linking to Amazon.com.
+        </p>
+        <p>
+          <strong>Affiliate Earning Statement:</strong> As an Amazon Associate, we earn from qualifying purchases. Certain content that appears on this site comes from Amazon Services LLC. This content is provided 'as is' and is subject to change or removal at any time.
+        </p>
+        <p>
+          <strong>eBay Partner Network (EPN) Disclosure:</strong> This website and application participate in the eBay Partner Network (EPN), an affiliate program designed to provide a means for sites to earn commissions by referring users to eBay.com.
+        </p>
+      </div>
+
+      <div class="footer-bottom">
+        <div>
+          &copy; <span class="current-year">2026</span> MZ Developers. All rights reserved.
+        </div>
+        <div>
+          Designed for Android &bull; Built with Privacy in Mind
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
