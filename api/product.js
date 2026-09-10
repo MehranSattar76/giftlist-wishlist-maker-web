@@ -1,4 +1,4 @@
-﻿// api/product.js - Serverless Metadata Resolution Service for Vercel
+// api/product.js - Serverless Metadata Resolution Service for Vercel
 // Phase 1: Pure Native Multi-Store Extraction Engine (Zero Crawlbase)
 // Supports eBay Developer Browse API & Store-Specific Parsers for Walmart, Target, Best Buy, Etsy, Amazon
 
@@ -283,6 +283,7 @@ function extractStoreDetails(cleanUrl, html) {
     const listingId = listingMatch ? listingMatch[1] : null;
     const slugTitle = listingMatch && listingMatch[2] ? cleanSlug(listingMatch[2]) : null;
 
+    // 5. ETSY
     let etsyPrice = null;
     const priceMatch = html.match(/meta[^>]*property=["']product:price:amount["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
       || html.match(/class=["']currency-value["']>(\d+(?:\.\d+)?)<\/span>/i);
@@ -291,10 +292,25 @@ function extractStoreDetails(cleanUrl, html) {
     return { storeName: 'Etsy', listingId, slugTitle, storePrice: etsyPrice };
   }
 
-  return { storeName: 'Online Store' };
+  // 6. EBAY
+  if (h.includes('ebay.')) {
+    const itemIdMatch = cleanUrl.match(/ebay\.[a-z.]+\/itm\/(?:[^/?#]+\/)?(\d{9,14})/i);
+    const itemId = itemIdMatch ? itemIdMatch[1] : null;
+    const slugMatch = cleanUrl.match(/ebay\.[a-z.]+\/itm\/([^/?#]+)\/\d+/i);
+    const slugTitle = slugMatch ? cleanSlug(slugMatch[1]) : null;
+
+    let ebayPrice = null;
+    const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
+      || html.match(/class=["']x-price-primary["'][^>]*>[\s\S]*?\$(\d+(?:\.\d+)?)/i);
+    if (priceMatch) ebayPrice = parseFloat(priceMatch[1]);
+
+    return { storeName: 'eBay', itemId, slugTitle, storePrice: ebayPrice };
+  }
+
+  return { storeName: null };
 }
 
-async function resolveUniversalProduct(url) {
+async function resolveUniversalProduct(url, debugInfo = {}) {
   let cleanUrl = url;
   if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
     cleanUrl = 'https://' + cleanUrl;
@@ -330,8 +346,15 @@ async function resolveUniversalProduct(url) {
       redirect: 'follow',
       signal: AbortSignal.timeout(8000)
     });
+    debugInfo.fetchStatus = response.status;
     html = await response.text();
+    debugInfo.htmlLength = html.length;
+    if (html.includes('<title>')) {
+      const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      debugInfo.pageTitle = tm ? tm[1].trim() : null;
+    }
   } catch (err) {
+    debugInfo.fetchError = err.message;
     console.warn('Direct fetch failed, continuing with URL slug fallbacks:', err.message);
   }
 
@@ -414,7 +437,9 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { url } = req.query;
+  const { url, debug } = req.query;
+  const isDebug = debug === '1';
+  const debugInfo = {};
 
   if (!url || typeof url !== 'string' || !url.trim()) {
     return res.status(400).json({
@@ -429,23 +454,30 @@ module.exports = async function handler(req, res) {
     // 1. eBay Track (Uses official eBay Developer Browse API - 100% reliable)
     const ebayItemId = extractEbayItemId(trimmedUrl);
     if (ebayItemId) {
+      debugInfo.ebayItemId = ebayItemId;
+      debugInfo.hasEbayClientId = Boolean(EBAY_CLIENT_ID);
+      debugInfo.hasEbaySecret = Boolean(EBAY_CLIENT_SECRET);
       try {
         const ebayData = await resolveEbayProduct(ebayItemId, trimmedUrl);
+        if (isDebug) ebayData.debug = debugInfo;
         return res.status(200).json(ebayData);
       } catch (ebayErr) {
+        debugInfo.ebayError = ebayErr.message;
         console.warn('eBay API resolution failed, falling back to native extractor:', ebayErr.message);
       }
     }
 
     // 2. Native Multi-Store Engine for all stores (Zero Crawlbase in Phase 1)
-    const result = await resolveUniversalProduct(trimmedUrl);
+    const result = await resolveUniversalProduct(trimmedUrl, debugInfo);
+    if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error resolving product metadata:', error);
     return res.status(500).json({
       success: false,
       url: trimmedUrl,
-      error: error.message || 'Failed to extract metadata'
+      error: error.message || 'Failed to extract metadata',
+      debug: isDebug ? debugInfo : undefined
     });
   }
 };
