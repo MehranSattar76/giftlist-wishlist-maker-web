@@ -340,7 +340,7 @@ function extractStoreDetails(cleanUrl, html) {
   return { storeName: null };
 }
 
-async function resolveUniversalProduct(url, debugInfo = {}) {
+async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null) {
   let cleanUrl = url;
   if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
     cleanUrl = 'https://' + cleanUrl;
@@ -353,39 +353,50 @@ async function resolveUniversalProduct(url, debugInfo = {}) {
 
   const baseStoreName = extractStoreName(host);
 
-  const referer = `https://${host}/`;
-  const fetchHeaders = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Referer': referer,
-    'Sec-Ch-Ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
-    'Sec-Ch-Ua-Mobile': '?0',
-    'Sec-Ch-Ua-Platform': '"Windows"',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'same-origin',
-    'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1'
-  };
-
   let html = '';
-  try {
-    const response = await fetch(cleanUrl, {
-      headers: fetchHeaders,
-      redirect: 'follow',
-      signal: AbortSignal.timeout(8000)
-    });
-    debugInfo.fetchStatus = response.status;
-    html = await response.text();
+  if (providedHtml && typeof providedHtml === 'string' && providedHtml.length > 50) {
+    html = providedHtml;
+    debugInfo.source = 'client-assisted-edge-fetch';
     debugInfo.htmlLength = html.length;
     if (html.includes('<title>')) {
       const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
       debugInfo.pageTitle = tm ? tm[1].trim() : null;
     }
-  } catch (err) {
-    debugInfo.fetchError = err.message;
-    console.warn('Direct fetch failed, continuing with URL slug fallbacks:', err.message);
+  } else {
+    const referer = `https://${host}/`;
+    const fetchHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Referer': referer,
+      'Sec-Ch-Ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1'
+    };
+
+    try {
+      const response = await fetch(cleanUrl, {
+        headers: fetchHeaders,
+        redirect: 'follow',
+        signal: AbortSignal.timeout(8000)
+      });
+      debugInfo.fetchStatus = response.status;
+      html = await response.text();
+      debugInfo.htmlLength = html.length;
+      debugInfo.source = 'server-direct-fetch';
+      if (html.includes('<title>')) {
+        const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        debugInfo.pageTitle = tm ? tm[1].trim() : null;
+      }
+    } catch (err) {
+      debugInfo.fetchError = err.message;
+      console.warn('Direct fetch failed, continuing with URL slug fallbacks:', err.message);
+    }
   }
 
   // 1. Run store-specific native extractor
@@ -467,8 +478,17 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { url, debug, ebaySearch } = req.query;
-  const isDebug = debug === '1';
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (_) {}
+  }
+
+  const targetUrl = (body?.url || req.query.url || '').trim();
+  const clientHtml = (body?.html && typeof body.html === 'string') ? body.html : null;
+  const isDebug = (body?.debug === '1' || req.query.debug === '1');
+  const ebaySearch = body?.ebaySearch || req.query.ebaySearch;
   const debugInfo = {};
 
   if (ebaySearch) {
@@ -488,24 +508,22 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  if (!url || typeof url !== 'string' || !url.trim()) {
+  if (!targetUrl) {
     return res.status(400).json({
       success: false,
-      error: 'Missing required "url" query parameter'
+      error: 'Missing required "url" query or body parameter'
     });
   }
 
-  const trimmedUrl = url.trim();
-
   try {
     // 1. eBay Track (Uses official eBay Developer Browse API - 100% reliable)
-    const ebayItemId = extractEbayItemId(trimmedUrl);
+    const ebayItemId = extractEbayItemId(targetUrl);
     if (ebayItemId) {
       debugInfo.ebayItemId = ebayItemId;
       debugInfo.hasEbayClientId = Boolean(EBAY_CLIENT_ID);
       debugInfo.hasEbaySecret = Boolean(EBAY_CLIENT_SECRET);
       try {
-        const ebayData = await resolveEbayProduct(ebayItemId, trimmedUrl);
+        const ebayData = await resolveEbayProduct(ebayItemId, targetUrl);
         if (isDebug) ebayData.debug = debugInfo;
         return res.status(200).json(ebayData);
       } catch (ebayErr) {
@@ -514,15 +532,15 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // 2. Native Multi-Store Engine for all stores (Zero Crawlbase in Phase 1)
-    const result = await resolveUniversalProduct(trimmedUrl, debugInfo);
+    // 2. Native Multi-Store Engine (Client-Assisted edge fetch or Server direct fetch)
+    const result = await resolveUniversalProduct(targetUrl, debugInfo, clientHtml);
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error resolving product metadata:', error);
     return res.status(500).json({
       success: false,
-      url: trimmedUrl,
+      url: targetUrl,
       error: error.message || 'Failed to extract metadata',
       debug: isDebug ? debugInfo : undefined
     });
