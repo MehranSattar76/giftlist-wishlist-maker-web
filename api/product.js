@@ -441,9 +441,26 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const { url, debug } = req.query;
+  const { url, debug, ebaySearch } = req.query;
   const isDebug = debug === '1';
   const debugInfo = {};
+
+  if (ebaySearch) {
+    try {
+      const token = await getEbayAccessToken();
+      const sRes = await fetch(`https://api.ebay.com/buy/browse/v1/item_summary/search?q=${encodeURIComponent(ebaySearch)}&limit=2`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+          'Accept': 'application/json'
+        }
+      });
+      const sJson = await sRes.json();
+      return res.status(200).json({ status: sRes.status, data: sJson });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
 
   if (!url || typeof url !== 'string' || !url.trim()) {
     return res.status(400).json({
