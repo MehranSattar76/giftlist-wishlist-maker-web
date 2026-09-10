@@ -1,5 +1,6 @@
-// api/product.js - Serverless Metadata Resolution Service for Vercel
-// Supports eBay Developer Browse API & Universal E-Commerce Fallbacks
+﻿// api/product.js - Serverless Metadata Resolution Service for Vercel
+// Phase 1: Pure Native Multi-Store Extraction Engine (Zero Crawlbase)
+// Supports eBay Developer Browse API & Store-Specific Parsers for Walmart, Target, Best Buy, Etsy, Amazon
 
 const EBAY_CLIENT_ID = process.env.EBAY_CLIENT_ID || '';
 const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET || '';
@@ -13,6 +14,10 @@ let ebayTokenCache = {
 async function getEbayAccessToken() {
   if (ebayTokenCache.token && Date.now() < ebayTokenCache.expiresAt - 60000) {
     return ebayTokenCache.token;
+  }
+
+  if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET) {
+    throw new Error('eBay credentials not configured');
   }
 
   const credentials = Buffer.from(`${EBAY_CLIENT_ID}:${EBAY_CLIENT_SECRET}`).toString('base64');
@@ -43,11 +48,9 @@ function extractEbayItemId(url) {
 
 async function resolveEbayProduct(itemId, rawUrl) {
   const token = await getEbayAccessToken();
-  
-  // Format standard item ID or try REST-style ID
   const itemRestId = `v1|${itemId}|0`;
   let apiUrl = `https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(itemRestId)}`;
-  
+
   let response = await fetch(apiUrl, {
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -57,7 +60,6 @@ async function resolveEbayProduct(itemId, rawUrl) {
   });
 
   if (!response.ok) {
-    // Fallback directly to legacy format
     apiUrl = `https://api.ebay.com/buy/browse/v1/item/${itemId}`;
     response = await fetch(apiUrl, {
       headers: {
@@ -88,6 +90,13 @@ async function resolveEbayProduct(itemId, rawUrl) {
     imageUrl: item.image?.imageUrl || item.additionalImages?.[0]?.imageUrl || null,
     affiliateUrl: item.itemAffiliateWebUrl || item.itemWebUrl || rawUrl
   };
+}
+
+function cleanSlug(slug) {
+  if (!slug) return null;
+  const decoded = decodeURIComponent(slug).replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (decoded.length < 3) return null;
+  return decoded.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
 }
 
 function extractStoreName(host) {
@@ -157,32 +166,132 @@ function extractMetaTag(html, property) {
   const match = html.match(regex);
   if (match && match[1]) return match[1].trim();
 
-  // Reverse attribute order: content="..." property="..."
   const altRegex = new RegExp(`<meta[^>]*content=["']([^"']*)["'][^>]*(?:property|name)=["']${property}["']`, 'i');
   const altMatch = html.match(altRegex);
   return altMatch && altMatch[1] ? altMatch[1].trim() : null;
 }
 
-function extractSlugTitle(url) {
-  // Amazon
-  const amzMatch = url.match(/amazon\.[a-z.]+\/([^/?#]+)\/(?:dp|gp\/product)\/[A-Z0-9]{10}/i);
-  if (amzMatch && amzMatch[1] && !['dp', 'gp'].includes(amzMatch[1].toLowerCase())) {
-    return amzMatch[1].replace(/[-_]/g, ' ').trim();
-  }
-  // Target
-  const tgtMatch = url.match(/target\.[a-z.]+\/p\/([^/?#]+)\/-\/A-\d+/i);
-  if (tgtMatch && tgtMatch[1]) return tgtMatch[1].replace(/[-_]/g, ' ').trim();
-  // Walmart
-  const wmtMatch = url.match(/walmart\.[a-z.]+\/ip\/([^/?#]+)\/\d+/i);
-  if (wmtMatch && wmtMatch[1]) return wmtMatch[1].replace(/[-_]/g, ' ').trim();
-  // Etsy
-  const etsyMatch = url.match(/etsy\.[a-z.]+\/listing\/\d+\/([^/?#]+)/i);
-  if (etsyMatch && etsyMatch[1]) return etsyMatch[1].replace(/[-_]/g, ' ').trim();
-  // Best Buy
-  const bbMatch = url.match(/bestbuy\.[a-z.]+\/site\/([^/?#]+)\/\d+\.p/i);
-  if (bbMatch && bbMatch[1]) return bbMatch[1].replace(/[-_]/g, ' ').trim();
+function isValidTitle(t) {
+  if (!t || typeof t !== 'string') return false;
+  const lower = t.toLowerCase().trim();
+  if (lower.length < 3) return false;
+  if (lower.includes('undefined')) return false;
+  if (lower.includes('robot') || lower.includes('captcha') || lower.includes('human')) return false;
+  if (lower.includes('access denied') || lower.includes('page not found') || lower.includes('error page')) return false;
+  if (lower.includes('item not available')) return false;
+  if (lower === 'target' || lower === 'walmart' || lower === 'amazon' || lower === 'best buy' || lower === 'etsy') return false;
+  return true;
+}
 
-  return null;
+function extractStoreDetails(cleanUrl, html) {
+  const h = cleanUrl.toLowerCase();
+
+  // 1. AMAZON
+  if (h.includes('amazon.') || h.includes('a.co') || h.includes('amzn.to')) {
+    const asinMatch = cleanUrl.match(/(?:\/dp\/|\/gp\/product\/|\/d\/|\/asin\/)([A-Z0-9]{10})/i);
+    const asin = asinMatch ? asinMatch[1] : null;
+    const slugMatch = cleanUrl.match(/amazon\.[a-z.]+\/([^/?#]+)\/(?:dp|gp\/product)\/[A-Z0-9]{10}/i);
+    const slugTitle = slugMatch && !['dp', 'gp'].includes(slugMatch[1].toLowerCase()) ? cleanSlug(slugMatch[1]) : null;
+    const cdnImage = asin ? `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_SX500_.jpg` : null;
+
+    let amzPrice = null;
+    const priceMatch = html.match(/class=["']a-price-whole["']>(\d+)<\/span><span class=["']a-price-fraction["']>(\d+)<\/span>/i);
+    if (priceMatch) {
+      amzPrice = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+    }
+
+    return { storeName: 'Amazon', asin, slugTitle, cdnImage, storePrice: amzPrice };
+  }
+
+  // 2. WALMART
+  if (h.includes('walmart.')) {
+    const itemIdMatch = cleanUrl.match(/walmart\.[a-z.]+\/ip\/(?:[^/?#]+\/)?(\d{7,12})/i);
+    const itemId = itemIdMatch ? itemIdMatch[1] : null;
+    const slugMatch = cleanUrl.match(/walmart\.[a-z.]+\/ip\/([^/?#]+)\/\d+/i);
+    const slugTitle = slugMatch ? cleanSlug(slugMatch[1]) : null;
+
+    let nextDataPrice = null;
+    let nextDataTitle = null;
+    let nextDataImage = null;
+
+    const nextDataMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
+    if (nextDataMatch && nextDataMatch[1]) {
+      try {
+        const nextJson = JSON.parse(nextDataMatch[1]);
+        const prod = nextJson?.props?.pageProps?.initialData?.data?.product;
+        if (prod) {
+          nextDataTitle = prod.name || null;
+          nextDataPrice = prod.priceInfo?.currentPrice?.price || prod.priceInfo?.minPrice || null;
+          nextDataImage = prod.imageInfo?.thumbnailUrl || prod.imageInfo?.allImages?.[0]?.url || null;
+        }
+      } catch (_) {}
+    }
+
+    if (!nextDataPrice) {
+      const priceMatch = html.match(/"currentPrice"\s*:\s*\{"price"\s*:\s*(\d+(?:\.\d+)?)/i);
+      if (priceMatch) nextDataPrice = parseFloat(priceMatch[1]);
+    }
+
+    return {
+      storeName: 'Walmart',
+      itemId,
+      slugTitle,
+      storeTitle: nextDataTitle,
+      storePrice: nextDataPrice,
+      storeImage: nextDataImage
+    };
+  }
+
+  // 3. TARGET
+  if (h.includes('target.')) {
+    const tcinMatch = cleanUrl.match(/\/A-(\d{7,10})/i);
+    const tcin = tcinMatch ? tcinMatch[1] : null;
+    const slugMatch = cleanUrl.match(/target\.[a-z.]+\/p\/([^/?#]+)\/-\/A-\d+/i);
+    const slugTitle = slugMatch ? cleanSlug(slugMatch[1]) : null;
+
+    let targetPrice = null;
+    const priceMatch = html.match(/"current_retail"\s*:\s*(\d+(?:\.\d+)?)/i)
+      || html.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/i);
+    if (priceMatch) targetPrice = parseFloat(priceMatch[1]);
+
+    return { storeName: 'Target', tcin, slugTitle, storePrice: targetPrice };
+  }
+
+  // 4. BEST BUY
+  if (h.includes('bestbuy.')) {
+    const skuMatch = cleanUrl.match(/bestbuy\.[a-z.]+\/site\/[^/?#]+\/(\d{7,8})\.p/i)
+      || cleanUrl.match(/[?&]skuId=(\d{7,8})/i);
+    const sku = skuMatch ? skuMatch[1] : null;
+    const slugMatch = cleanUrl.match(/bestbuy\.[a-z.]+\/site\/([^/?#]+)\/\d+\.p/i);
+    const slugTitle = slugMatch ? cleanSlug(slugMatch[1]) : null;
+
+    const cdnImage = sku
+      ? `https://pisces.bbystatic.com/image2/BestBuy_US/images/products/${sku.substring(0, 4)}/${sku}_sd.jpg`
+      : null;
+
+    let bbyPrice = null;
+    const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
+      || html.match(/"customerPrice"\s*:\s*(\d+(?:\.\d+)?)/i);
+    if (priceMatch) bbyPrice = parseFloat(priceMatch[1]);
+
+    return { storeName: 'Best Buy', sku, slugTitle, cdnImage, storePrice: bbyPrice };
+  }
+
+  // 5. ETSY
+  if (h.includes('etsy.')) {
+    const listingMatch = cleanUrl.match(/etsy\.[a-z.]+\/listing\/(\d{7,12})(?:\/([^/?#]+))?/i);
+    const listingId = listingMatch ? listingMatch[1] : null;
+    const slugTitle = listingMatch && listingMatch[2] ? cleanSlug(listingMatch[2]) : null;
+
+    let etsyPrice = null;
+    const priceMatch = html.match(/meta[^>]*property=["']product:price:amount["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
+      || html.match(/class=["']currency-value["']>(\d+(?:\.\d+)?)<\/span>/i);
+    if (priceMatch) etsyPrice = parseFloat(priceMatch[1]);
+
+    return { storeName: 'Etsy', listingId, slugTitle, storePrice: etsyPrice };
+  }
+
+  return { storeName: 'Online Store' };
 }
 
 async function resolveUniversalProduct(url) {
@@ -196,61 +305,70 @@ async function resolveUniversalProduct(url) {
     host = new URL(cleanUrl).hostname.replace('www.', '');
   } catch (_) {}
 
-  const storeName = extractStoreName(host);
-  const slugTitle = extractSlugTitle(cleanUrl);
+  const baseStoreName = extractStoreName(host);
 
-  const response = await fetch(cleanUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-      'Accept-Language': 'en-US,en;q=0.9',
-      'Sec-Ch-Ua': '"Chromium";v="128", "Not;A=Brand";v="24", "Google Chrome";v="128"',
-      'Sec-Ch-Ua-Mobile': '?0',
-      'Sec-Ch-Ua-Platform': '"Windows"',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'none',
-      'Sec-Fetch-User': '?1',
-      'Upgrade-Insecure-Requests': '1'
-    },
-    redirect: 'follow',
-    signal: AbortSignal.timeout(10000)
-  });
+  const referer = `https://${host}/`;
+  const fetchHeaders = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Referer': referer,
+    'Sec-Ch-Ua': '"Google Chrome";v="129", "Not=A?Brand";v="8", "Chromium";v="129"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'same-origin',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1'
+  };
 
-  const html = await response.text();
+  let html = '';
+  try {
+    const response = await fetch(cleanUrl, {
+      headers: fetchHeaders,
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000)
+    });
+    html = await response.text();
+  } catch (err) {
+    console.warn('Direct fetch failed, continuing with URL slug fallbacks:', err.message);
+  }
 
-  // 1. Try structured JSON-LD
+  // 1. Run store-specific native extractor
+  const storeData = extractStoreDetails(cleanUrl, html);
+  const storeName = storeData.storeName || baseStoreName;
+
+  // 2. Structured JSON-LD
   const jsonLd = parseJsonLd(html);
 
-  // 2. OpenGraph / Twitter meta tags
+  // 3. OpenGraph / Twitter meta tags
   const ogTitle = extractMetaTag(html, 'og:title') || extractMetaTag(html, 'twitter:title');
   const ogImage = extractMetaTag(html, 'og:image') || extractMetaTag(html, 'twitter:image');
   const ogPrice = extractMetaTag(html, 'og:price:amount') || extractMetaTag(html, 'product:price:amount');
 
-  // 3. Smart Title Validation & Selection
-  function isValidTitle(t) {
-    if (!t || typeof t !== 'string') return false;
-    const lower = t.toLowerCase().trim();
-    if (lower.length < 3) return false;
-    if (lower.includes('undefined')) return false;
-    if (lower.includes('robot') || lower.includes('captcha')) return false;
-    if (lower.includes('access denied') || lower.includes('page not found') || lower.includes('error page')) return false;
-    if (lower.includes('item not available')) return false;
-    return true;
+  // 4. Resolve Title (Priority: Structured Store Title -> JSON-LD -> OpenGraph -> Slug -> Raw Title)
+  let finalTitle = null;
+  if (isValidTitle(storeData.storeTitle)) finalTitle = storeData.storeTitle.trim();
+  else if (isValidTitle(jsonLd?.title)) finalTitle = jsonLd.title.trim();
+  else if (isValidTitle(ogTitle)) finalTitle = ogTitle.trim();
+  else if (storeData.slugTitle) finalTitle = storeData.slugTitle;
+  else {
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const rawTitleTag = titleMatch ? titleMatch[1].replace(/[\r\n\t]+/g, ' ').trim() : null;
+    if (isValidTitle(rawTitleTag)) finalTitle = rawTitleTag;
+    else finalTitle = storeName !== 'Online Store' ? `Item from ${storeName}` : 'Shared Product';
   }
 
-  let finalTitle = null;
-  if (isValidTitle(jsonLd?.title)) finalTitle = jsonLd.title.trim();
-  else if (isValidTitle(ogTitle)) finalTitle = ogTitle.trim();
-  else if (slugTitle) finalTitle = slugTitle;
-  else if (isValidTitle(rawTitleTag)) finalTitle = rawTitleTag.trim();
-  else finalTitle = storeName !== 'Online Store' ? `Item from ${storeName}` : 'Shared Product';
+  // 5. Resolve Image (Priority: Store Image -> JSON-LD -> OpenGraph -> CDN Fallback)
+  const finalImage = storeData.storeImage
+    || jsonLd?.image
+    || (ogImage && !ogImage.includes('favicon') ? ogImage : null)
+    || storeData.cdnImage
+    || null;
 
-  // 4. Fallback Image
-  const finalImage = jsonLd?.image || ogImage || null;
-
-  // 5. Price & Range Parsing
-  let finalPrice = jsonLd?.price || (ogPrice ? parseFloat(ogPrice) : null);
+  // 6. Resolve Price & Range
+  let finalPrice = storeData.storePrice || jsonLd?.price || (ogPrice ? parseFloat(ogPrice) : null);
   let minPrice = jsonLd?.minPrice || finalPrice;
   let maxPrice = jsonLd?.maxPrice || null;
   let priceRangeText = null;
@@ -267,7 +385,7 @@ async function resolveUniversalProduct(url) {
     }
   }
 
-  // Disallow invalid prices (e.g. 0.00)
+  // Disallow invalid prices (<= 0.0)
   if (finalPrice !== null && finalPrice <= 0) finalPrice = null;
   if (minPrice !== null && minPrice <= 0) minPrice = null;
 
@@ -282,48 +400,6 @@ async function resolveUniversalProduct(url) {
     priceRangeText: priceRangeText,
     imageUrl: finalImage
   };
-}
-
-async function resolveWithCrawlbase(url) {
-  const token = process.env.CRAWLBASE_TOKEN || '';
-  if (!token) return null;
-
-  try {
-    const endpoint = `https://api.crawlbase.com/?token=${token}&autoparse=true&url=${encodeURIComponent(url)}`;
-    const res = await fetch(endpoint, { signal: AbortSignal.timeout(12000) });
-    if (!res.ok) return null;
-    const data = await res.json();
-    const body = data.body;
-    if (!body) return null;
-
-    const title = body.name || body.title;
-    if (!title || typeof title !== 'string' || !title.trim()) return null;
-
-    const priceVal = typeof body.price === 'number' ? body.price : parseFloat(body.price);
-    const image = body.mainImage || body.main_image || (Array.isArray(body.images) ? body.images[0] : null) || (Array.isArray(body.highResolutionImages) ? body.highResolutionImages[0] : null);
-
-    let storeName = 'Online Store';
-    if (url.includes('amazon') || url.includes('a.co') || url.includes('amzn.to')) storeName = 'Amazon';
-    else if (url.includes('walmart')) storeName = 'Walmart';
-    else if (url.includes('target')) storeName = 'Target';
-    else if (url.includes('bestbuy')) storeName = 'Best Buy';
-    else if (url.includes('etsy')) storeName = 'Etsy';
-
-    return {
-      success: true,
-      url: url,
-      title: title.trim(),
-      storeName: storeName,
-      price: !isNaN(priceVal) && priceVal > 0 ? priceVal : null,
-      minPrice: !isNaN(priceVal) && priceVal > 0 ? priceVal : null,
-      maxPrice: null,
-      priceRangeText: null,
-      imageUrl: image || null
-    };
-  } catch (err) {
-    console.warn('Crawlbase extraction failed:', err.message);
-    return null;
-  }
 }
 
 module.exports = async function handler(req, res) {
@@ -350,38 +426,19 @@ module.exports = async function handler(req, res) {
   const trimmedUrl = url.trim();
 
   try {
-    // 1. eBay Track (Uses official eBay Browse API - saves Crawlbase credits)
+    // 1. eBay Track (Uses official eBay Developer Browse API - 100% reliable)
     const ebayItemId = extractEbayItemId(trimmedUrl);
     if (ebayItemId) {
       try {
         const ebayData = await resolveEbayProduct(ebayItemId, trimmedUrl);
         return res.status(200).json(ebayData);
       } catch (ebayErr) {
-        console.warn('eBay API resolution failed, falling back to universal extractor:', ebayErr.message);
+        console.warn('eBay API resolution failed, falling back to native extractor:', ebayErr.message);
       }
     }
 
-    // 2. Amazon Track (Heavily anti-bot gated - prioritize Crawlbase parser if token is set)
-    if (trimmedUrl.includes('amazon.') || trimmedUrl.includes('a.co') || trimmedUrl.includes('amzn.to')) {
-      const cbResult = await resolveWithCrawlbase(trimmedUrl);
-      if (cbResult && cbResult.title) {
-        return res.status(200).json(cbResult);
-      }
-    }
-
-    // 3. Fast Universal resolution for other stores
+    // 2. Native Multi-Store Engine for all stores (Zero Crawlbase in Phase 1)
     const result = await resolveUniversalProduct(trimmedUrl);
-    const hasMeaningfulTitle = result && result.title && !result.title.startsWith('Item from') && !result.title.startsWith('Shared Product');
-    if (hasMeaningfulTitle && (result.price != null || result.imageUrl != null)) {
-      return res.status(200).json(result);
-    }
-
-    // 4. Fallback to Crawlbase if direct extraction had missing details or was gated
-    const cbFallback = await resolveWithCrawlbase(trimmedUrl);
-    if (cbFallback && cbFallback.title) {
-      return res.status(200).json(cbFallback);
-    }
-
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error resolving product metadata:', error);
