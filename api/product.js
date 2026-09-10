@@ -13,6 +13,126 @@ let ebayTokenCache = {
   expiresAt: 0
 };
 
+// Rolling in-memory log buffer (stores last 50 requests across warm serverless invocations)
+const MAX_LOGS = 50;
+const requestLogs = [];
+
+function recordRequestLog(entry) {
+  requestLogs.unshift({
+    id: `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    timestamp: new Date().toISOString(),
+    ...entry
+  });
+  if (requestLogs.length > MAX_LOGS) {
+    requestLogs.pop();
+  }
+}
+
+function renderLogsHtml(logs) {
+  const rows = logs.map(l => {
+    const statusBadge = l.success
+      ? '<span style="color:#0f5132;background:#d1e7dd;padding:2px 8px;border-radius:4px;font-weight:600;">200 OK</span>'
+      : `<span style="color:#842029;background:#f8d7da;padding:2px 8px;border-radius:4px;font-weight:600;">ERR: ${l.error || 'Failed'}</span>`;
+    
+    const imgPreview = l.imageUrl
+      ? `<a href="${l.imageUrl}" target="_blank"><img src="${l.imageUrl}" style="max-height:40px;max-width:40px;border-radius:4px;object-fit:cover;" /></a>`
+      : '<span style="color:#888;">None</span>';
+    
+    const priceDisplay = (l.price !== null && l.price !== undefined)
+      ? `<strong>$${Number(l.price).toFixed(2)}</strong>`
+      : '<span style="color:#888;">—</span>';
+
+    const cbInfo = l.crawlbaseTriggered
+      ? `<span style="color:#055160;background:#cff4fc;padding:2px 6px;border-radius:3px;font-size:11px;">${l.crawlbaseMode || 'yes'} (${l.crawlbaseStatus || '—'})</span>`
+      : '<span style="color:#888;font-size:11px;">Skipped</span>';
+
+    const cleanTitle = (l.title || 'Untitled').length > 40
+      ? (l.title || 'Untitled').slice(0, 40) + '…'
+      : (l.title || 'Untitled');
+
+    const shortUrl = (l.url || '').length > 45
+      ? (l.url || '').slice(0, 45) + '…'
+      : (l.url || '');
+
+    return `<tr>
+      <td style="font-size:12px;white-space:nowrap;">${l.timestamp ? l.timestamp.split('T')[1].split('.')[0] : '—'}</td>
+      <td><strong>${l.method}</strong></td>
+      <td><span style="background:#f0f2f5;padding:2px 6px;border-radius:3px;font-weight:500;">${l.store || 'Store'}</span></td>
+      <td><a href="${l.url}" target="_blank" title="${l.url}" style="color:#0d6efd;text-decoration:none;">${shortUrl}</a></td>
+      <td title="${l.title || ''}">${cleanTitle}</td>
+      <td>${priceDisplay}</td>
+      <td style="text-align:center;">${imgPreview}</td>
+      <td><span style="font-size:11px;color:#555;">${l.source || '—'}</span></td>
+      <td>${cbInfo}</td>
+      <td style="font-size:12px;text-align:right;">${l.durationMs || 0}ms</td>
+      <td>${statusBadge}</td>
+    </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Vercel Request Logs - Wishlist & Giftlist Metadata Engine</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #212529; margin: 0; padding: 20px; }
+    .container { max-width: 1300px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; }
+    h1 { font-size: 22px; margin-top: 0; display: flex; align-items: center; justify-content: space-between; }
+    .meta { color: #6c757d; font-size: 13px; margin-bottom: 20px; }
+    .actions { display: flex; gap: 10px; }
+    .btn { background: #0d6efd; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; }
+    .btn-secondary { background: #6c757d; }
+    .btn-danger { background: #dc3545; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    th { text-align: left; padding: 10px; background: #f1f3f5; border-bottom: 2px solid #dee2e6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { padding: 10px; border-bottom: 1px solid #e9ecef; vertical-align: middle; }
+    tr:hover { background-color: #f8f9fa; }
+    .empty { padding: 40px; text-align: center; color: #888; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>
+      <span>Vercel In-Memory Request Logs (${logs.length} / ${MAX_LOGS})</span>
+      <div class="actions">
+        <a href="?logs=1&format=html" class="btn">Refresh</a>
+        <a href="?logs=1" class="btn btn-secondary" target="_blank">View JSON</a>
+        <a href="?clearLogs=1" class="btn btn-danger" onclick="return confirm('Clear logs?')">Clear Logs</a>
+      </div>
+    </h1>
+    <div class="meta">
+      Captures real-time metadata resolution requests across warm serverless invocations. Shows client Edge fetches, server fetches, Crawlbase triggers, and final parsed fields.
+    </div>
+    ${logs.length === 0 ? '<div class="empty">No requests recorded yet. Make a request via the mobile app or API to see live traces.</div>' : `
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Method</th>
+            <th>Store</th>
+            <th>Target URL</th>
+            <th>Resolved Title</th>
+            <th>Price</th>
+            <th>Image</th>
+            <th>Source</th>
+            <th>Crawlbase</th>
+            <th>Latency</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    </div>
+    `}
+  </div>
+</body>
+</html>`;
+}
+
 async function getEbayAccessToken() {
   if (ebayTokenCache.token && Date.now() < ebayTokenCache.expiresAt - 60000) {
     return ebayTokenCache.token;
@@ -207,12 +327,67 @@ function isValidTitle(t) {
   if (!t || typeof t !== 'string') return false;
   const lower = t.toLowerCase().trim();
   if (lower.length < 3) return false;
-  if (lower.includes('undefined')) return false;
+  if (lower.startsWith('undefined')) return false;
+  if (lower.includes('undefined : target')) return false;
   if (lower.includes('robot') || lower.includes('captcha') || lower.includes('human')) return false;
   if (lower.includes('access denied') || lower.includes('page not found') || lower.includes('error page')) return false;
   if (lower.includes('item not available')) return false;
+  if (lower.includes('expect more. pay less.')) return false;
   if (lower === 'target' || lower === 'walmart' || lower === 'amazon' || lower === 'best buy' || lower === 'etsy') return false;
   return true;
+}
+
+function extractAmazonPrice(html) {
+  if (!html || typeof html !== 'string') return null;
+
+  // 1. Check embedded twister / buybox JSON (contains direct numbers, immune to HTML changes)
+  const twisterMatch = html.match(/"desktop_buybox_group[^"]*":\s*\[\s*\{[^}]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i)
+    || html.match(/"priceAmount":\s*(\d+(?:\.\d+)?)/i)
+    || html.match(/twister-plus-buying-options-price-data["'][^>]*>[\s\S]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i);
+  if (twisterMatch) {
+    const val = parseFloat(twisterMatch[1]);
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 2. Scoped Buybox containers (corePriceDisplay, corePrice_feature_div, apex_desktop, booksHeaderSection)
+  const buyboxContainerRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePrice_feature_div|apex_desktop|price_inside_buybox|apex_dp_inside_header|booksHeaderSection|tmmSwatches|subtotal-price-value|buyBoxAccordion)["'][\s\S]{0,1200}?class=["'](?:a-price\s*[^"']*|a-size-base\s*a-color-price[^"']*)["'][\s\S]{0,400}?(?:<span class=["']a-offscreen["']>\s*\$([0-9,.]+)|>\s*\$([0-9,.]+)\s*<\/span>)/i;
+  const buyboxMatch = html.match(buyboxContainerRegex);
+  if (buyboxMatch) {
+    const pStr = (buyboxMatch[1] || buyboxMatch[2] || '').replace(/,/g, '');
+    const val = parseFloat(pStr);
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 3. Whole + Fraction inside buybox or core price display (allowing nested decimal span)
+  const wholeFractionRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePrice_feature_div|apex_desktop|price_inside_buybox)["'][\s\S]{0,1200}?class=["']a-price-whole["']>(\d+)<[\s\S]*?class=["']a-price-fraction["']>(\d+)</i;
+  const wfMatch = html.match(wholeFractionRegex);
+  if (wfMatch) {
+    const val = parseFloat(`${wfMatch[1]}.${wfMatch[2]}`);
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 4. Primary buybox price offscreen
+  const offscreenMatch = html.match(/class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]*?<span class=["']a-offscreen["']>\s*\$([0-9,.]+)/i);
+  if (offscreenMatch) {
+    const val = parseFloat(offscreenMatch[1].replace(/,/g, ''));
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 5. Books slot-price
+  const slotMatch = html.match(/class=["']slot-price["'][^>]*>[\s\S]*?class=["'][^"']*a-color-price[^"']*["']>\s*\$([0-9,.]+)/i);
+  if (slotMatch) {
+    const val = parseFloat(slotMatch[1].replace(/,/g, ''));
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 6. Generic core price whole + fraction across the top 500KB of page (ignoring installment rows)
+  const genericWf = html.match(/class=["']a-price-whole["']>(\d+)<[\s\S]{0,80}?class=["']a-price-fraction["']>(\d+)</i);
+  if (genericWf) {
+    const val = parseFloat(`${genericWf[1]}.${genericWf[2]}`);
+    if (!isNaN(val) && val > 0 && val < 50000) return val;
+  }
+
+  return null;
 }
 
 function extractStoreDetails(cleanUrl, html) {
@@ -226,13 +401,22 @@ function extractStoreDetails(cleanUrl, html) {
     const slugTitle = slugMatch && !['dp', 'gp'].includes(slugMatch[1].toLowerCase()) ? cleanSlug(slugMatch[1]) : null;
     const cdnImage = asin ? `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SCLZZZZZZZ_SX500_.jpg` : null;
 
-    let amzPrice = null;
-    const priceMatch = html.match(/class=["']a-price-whole["']>(\d+)<\/span><span class=["']a-price-fraction["']>(\d+)<\/span>/i);
-    if (priceMatch) {
-      amzPrice = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
-    }
+    let amzImage = null;
+    const imgMatch = html.match(/id=["']landingImage["'][^>]*data-old-hires=["']([^"']+)["']/i)
+      || html.match(/id=["']landingImage["'][^>]*src=["']([^"']+)["']/i)
+      || html.match(/data-a-dynamic-image=["']\{&quot;(https:\/\/[^&"]+)&quot;/i);
+    if (imgMatch) amzImage = imgMatch[1];
 
-    return { storeName: 'Amazon', asin, slugTitle, cdnImage, storePrice: amzPrice };
+    const amzPrice = extractAmazonPrice(html);
+
+    return {
+      storeName: 'Amazon',
+      asin,
+      slugTitle,
+      cdnImage,
+      storeImage: amzImage,
+      storePrice: amzPrice
+    };
   }
 
   // 2. WALMART
@@ -286,7 +470,11 @@ function extractStoreDetails(cleanUrl, html) {
       || html.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/i);
     if (priceMatch) targetPrice = parseFloat(priceMatch[1]);
 
-    return { storeName: 'Target', tcin, slugTitle, storePrice: targetPrice };
+    let targetImage = null;
+    const scene7Match = html.match(/https:\/\/target\.scene7\.com\/is\/image\/Target\/[a-zA-Z0-9_-]+/i);
+    if (scene7Match) targetImage = scene7Match[0];
+
+    return { storeName: 'Target', tcin, slugTitle, storePrice: targetPrice, storeImage: targetImage };
   }
 
   // 4. BEST BUY
@@ -315,10 +503,10 @@ function extractStoreDetails(cleanUrl, html) {
     const listingId = listingMatch ? listingMatch[1] : null;
     const slugTitle = listingMatch && listingMatch[2] ? cleanSlug(listingMatch[2]) : null;
 
-    // 5. ETSY
     let etsyPrice = null;
     const priceMatch = html.match(/meta[^>]*property=["']product:price:amount["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
-      || html.match(/class=["']currency-value["']>(\d+(?:\.\d+)?)<\/span>/i);
+      || html.match(/class=["']currency-value["']>(\d+(?:\.\d+)?)<\/span>/i)
+      || html.match(/class=["'][^"']*wt-text-title-larger[^"']*["'][^>]*>[\s\S]*?\$(\d+(?:\.\d+)?)/i);
     if (priceMatch) etsyPrice = parseFloat(priceMatch[1]);
 
     return { storeName: 'Etsy', listingId, slugTitle, storePrice: etsyPrice };
@@ -536,8 +724,10 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
   }
 
   try {
+    const isDedicatedScraper = Boolean(scraperName);
+    const cbTimeout = isDedicatedScraper ? 28000 : 12000;
     const cbResp = await fetch(apiUrl, {
-      signal: AbortSignal.timeout(28000)
+      signal: AbortSignal.timeout(cbTimeout)
     });
 
     debugInfo.crawlbaseStatus = cbResp.status;
@@ -634,6 +824,30 @@ module.exports = async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // 1. In-Memory Request Logs Inspection Endpoints
+  if (req.query.logs === '1' || req.query.viewLogs === '1') {
+    const wantsHtml = req.query.format === 'html' || (!req.query.format && req.headers.accept?.includes('text/html'));
+    if (wantsHtml) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(renderLogsHtml(requestLogs));
+    }
+    return res.status(200).json({
+      success: true,
+      totalRecorded: requestLogs.length,
+      maxBuffer: MAX_LOGS,
+      logs: requestLogs
+    });
+  }
+
+  if (req.query.clearLogs === '1') {
+    requestLogs.length = 0;
+    return res.status(200).json({ success: true, message: 'In-memory request logs cleared' });
+  }
+
+  const startTime = Date.now();
+  const rawClientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
+  const clientIp = rawClientIp.split(',')[0].trim() || 'unknown';
+
   let body = req.body;
   if (typeof body === 'string') {
     try {
@@ -680,6 +894,26 @@ module.exports = async function handler(req, res) {
       debugInfo.hasEbaySecret = Boolean(EBAY_CLIENT_SECRET);
       try {
         const ebayData = await resolveEbayProduct(ebayItemId, targetUrl);
+        const durationMs = Date.now() - startTime;
+        recordRequestLog({
+          method: req.method,
+          url: targetUrl,
+          store: 'eBay',
+          clientIp,
+          clientHtmlLength: clientHtml ? clientHtml.length : 0,
+          source: 'ebay-browse-api',
+          crawlbaseTriggered: false,
+          crawlbaseMode: null,
+          crawlbaseStatus: null,
+          title: ebayData.title,
+          price: ebayData.price,
+          hasImage: Boolean(ebayData.imageUrl),
+          imageUrl: ebayData.imageUrl,
+          durationMs,
+          success: true,
+          error: null
+        });
+        console.log(`[REQ] ${req.method} eBay - ${ebayData.title?.slice(0, 30)} - $${ebayData.price} (${durationMs}ms)`);
         if (isDebug) ebayData.debug = debugInfo;
         return res.status(200).json(ebayData);
       } catch (ebayErr) {
@@ -734,10 +968,50 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    const durationMs = Date.now() - startTime;
+    recordRequestLog({
+      method: req.method,
+      url: targetUrl,
+      store: result.storeName,
+      clientIp,
+      clientHtmlLength: clientHtml ? clientHtml.length : 0,
+      source: result.source || debugInfo.source || 'native',
+      crawlbaseTriggered: Boolean(debugInfo.crawlbaseTriggered),
+      crawlbaseMode: debugInfo.crawlbaseMode || null,
+      crawlbaseStatus: debugInfo.crawlbaseStatus || null,
+      title: result.title,
+      price: result.price,
+      hasImage: Boolean(result.imageUrl),
+      imageUrl: result.imageUrl,
+      durationMs,
+      success: true,
+      error: null
+    });
+    console.log(`[REQ] ${req.method} ${result.storeName || 'Store'} - ${result.title?.slice(0, 30)} - $${result.price} (${durationMs}ms)`);
+
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
   } catch (error) {
-    console.error('Error resolving product metadata:', error);
+    const durationMs = Date.now() - startTime;
+    recordRequestLog({
+      method: req.method,
+      url: targetUrl,
+      store: 'Unknown',
+      clientIp,
+      clientHtmlLength: clientHtml ? clientHtml.length : 0,
+      source: 'error',
+      crawlbaseTriggered: Boolean(debugInfo.crawlbaseTriggered),
+      crawlbaseMode: debugInfo.crawlbaseMode || null,
+      crawlbaseStatus: debugInfo.crawlbaseStatus || null,
+      title: null,
+      price: null,
+      hasImage: false,
+      imageUrl: null,
+      durationMs,
+      success: false,
+      error: error.message || 'Failed to extract metadata'
+    });
+    console.error('[REQ_ERR] Error resolving product metadata:', error);
     return res.status(500).json({
       success: false,
       url: targetUrl,
