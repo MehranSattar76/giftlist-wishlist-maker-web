@@ -532,7 +532,7 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
 
   try {
     const cbResp = await fetch(apiUrl, {
-      signal: AbortSignal.timeout(15000)
+      signal: AbortSignal.timeout(28000)
     });
 
     debugInfo.crawlbaseStatus = cbResp.status;
@@ -548,6 +548,7 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
     if (scraperName) {
       const data = await cbResp.json();
       debugInfo.crawlbaseJsonReceived = true;
+      debugInfo.crawlbaseRawData = data;
 
       const title = (data.title || data.name || '').trim();
       const rawPrice = data.price;
