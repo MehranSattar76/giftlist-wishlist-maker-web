@@ -103,11 +103,11 @@ function extractStoreName(host) {
 
 function extractPriceRange(text) {
   if (!text) return null;
-  const match = text.match(/(?:US\s*)?\$?\s*(\d{1,5}(?:\.\d{2})?)\s*(?:-|to)\s*(?:US\s*)?\$?\s*(\d{1,5}(?:\.\d{2})?)/i);
+  const match = text.match(/(?:US\s*)?\$\s*(\d{1,4}(?:\.\d{2})?)\s*(?:-|to)\s*(?:US\s*)?\$?\s*(\d{1,4}(?:\.\d{2})?)/i);
   if (!match) return null;
   const low = parseFloat(match[1]);
   const high = parseFloat(match[2]);
-  if (low > 0 && high > low) {
+  if (low > 0 && high > low && high < 5000) {
     return { low, high, text: `$${low.toFixed(2)} - $${high.toFixed(2)}` };
   }
   return null;
