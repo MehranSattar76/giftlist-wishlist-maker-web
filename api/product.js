@@ -74,6 +74,32 @@ async function resolveEbayProduct(itemId, rawUrl) {
     });
   }
 
+  // Try 4: Item Group (for listings with variations/options)
+  if (!response.ok) {
+    const groupResp = await fetch(`https://api.ebay.com/buy/browse/v1/item/get_items_by_item_group?item_group_id=${itemId}`, {
+      headers
+    });
+    if (groupResp.ok) {
+      const groupData = await groupResp.json();
+      const firstItem = groupData.items?.[0];
+      if (firstItem) {
+        const pVal = parseFloat(firstItem.price?.value);
+        return {
+          success: true,
+          url: rawUrl,
+          title: firstItem.title || 'eBay Item',
+          storeName: 'eBay',
+          price: !isNaN(pVal) && pVal > 0 ? pVal : null,
+          minPrice: !isNaN(pVal) && pVal > 0 ? pVal : null,
+          maxPrice: null,
+          priceRangeText: null,
+          imageUrl: firstItem.image?.imageUrl || firstItem.additionalImages?.[0]?.imageUrl || null,
+          affiliateUrl: firstItem.itemAffiliateWebUrl || firstItem.itemWebUrl || rawUrl
+        };
+      }
+    }
+  }
+
   if (!response.ok) {
     const errText = await response.text();
     throw new Error(`eBay item lookup failed (${response.status}): ${errText}`);
