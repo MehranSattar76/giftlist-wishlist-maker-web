@@ -1,9 +1,11 @@
 // api/product.js - Serverless Metadata Resolution Service for Vercel
-// Phase 1: Pure Native Multi-Store Extraction Engine (Zero Crawlbase)
-// Supports eBay Developer Browse API & Store-Specific Parsers for Walmart, Target, Best Buy, Etsy, Amazon
+// Phase 1: Pure Native Multi-Store Extraction Engine
+// Phase 2: Targeted Store-Specific Crawlbase Fallback Engine (Amazon, Walmart, Best Buy, Target, Etsy)
+// Supports eBay Developer Browse API & Store-Specific Parsers
 
 const EBAY_CLIENT_ID = process.env.EBAY_CLIENT_ID || '';
 const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET || '';
+const CRAWLBASE_TOKEN = process.env.CRAWLBASE_TOKEN || '';
 
 // In-memory token cache across serverless warm invocations
 let ebayTokenCache = {
@@ -356,7 +358,7 @@ async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null)
   let html = '';
   if (providedHtml && typeof providedHtml === 'string' && providedHtml.length > 50) {
     html = providedHtml;
-    debugInfo.source = 'client-assisted-edge-fetch';
+    debugInfo.source = debugInfo.crawlbaseTriggered ? 'crawlbase-unblocked-html' : 'client-assisted-edge-fetch';
     debugInfo.htmlLength = html.length;
     if (html.includes('<title>')) {
       const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -466,6 +468,147 @@ async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null)
   };
 }
 
+function parsePriceValue(priceVal) {
+  if (typeof priceVal === 'number' && !isNaN(priceVal) && priceVal > 0) {
+    return priceVal;
+  }
+  if (priceVal && typeof priceVal === 'object') {
+    const candidate = priceVal.value || priceVal.amount || priceVal.price;
+    return parsePriceValue(candidate);
+  }
+  if (typeof priceVal !== 'string') return null;
+  const cleaned = priceVal.replace(/,/g, '').trim();
+  const match = cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+  if (match) {
+    const val = parseFloat(match[1]);
+    return !isNaN(val) && val > 0 ? val : null;
+  }
+  return null;
+}
+
+function getCrawlbaseScraperName(url) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    if (host.includes('amazon.') || host.includes('amzn.')) {
+      return 'amazon-product-details';
+    }
+    if (host.includes('walmart.')) {
+      return 'walmart-product-details';
+    }
+    if (host.includes('bestbuy.')) {
+      return 'bestbuy-product-details';
+    }
+    if (host.includes('ebay.')) {
+      return 'ebay-product';
+    }
+  } catch (_) {}
+  return null;
+}
+
+async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
+  if (!CRAWLBASE_TOKEN) {
+    debugInfo.crawlbaseSkipped = 'Missing CRAWLBASE_TOKEN';
+    return null;
+  }
+
+  const scraperName = getCrawlbaseScraperName(targetUrl);
+  let countryParam = '&country=US';
+  try {
+    const host = new URL(targetUrl).hostname.toLowerCase();
+    if (host.endsWith('.co.uk')) countryParam = '&country=UK';
+    else if (host.endsWith('.de')) countryParam = '&country=DE';
+    else if (host.endsWith('.fr')) countryParam = '&country=FR';
+    else if (host.endsWith('.ca')) countryParam = '&country=CA';
+  } catch (_) {}
+
+  let apiUrl = '';
+  if (scraperName) {
+    apiUrl = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(targetUrl)}&scraper=${encodeURIComponent(scraperName)}${countryParam}`;
+    debugInfo.crawlbaseMode = `scraper:${scraperName}`;
+  } else {
+    apiUrl = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(targetUrl)}${countryParam}`;
+    debugInfo.crawlbaseMode = 'crawling-api-html';
+  }
+
+  try {
+    const cbResp = await fetch(apiUrl, {
+      signal: AbortSignal.timeout(15000)
+    });
+
+    debugInfo.crawlbaseStatus = cbResp.status;
+    const pcStatus = cbResp.headers.get('pc_status');
+    if (pcStatus) debugInfo.crawlbasePcStatus = pcStatus;
+
+    if (!cbResp.ok) {
+      const errText = await cbResp.text();
+      debugInfo.crawlbaseError = `HTTP ${cbResp.status}: ${errText.slice(0, 200)}`;
+      return null;
+    }
+
+    if (scraperName) {
+      const data = await cbResp.json();
+      debugInfo.crawlbaseJsonReceived = true;
+
+      const title = (data.title || data.name || '').trim();
+      const rawPrice = data.price;
+      const parsedPrice = parsePriceValue(rawPrice);
+      const image = data.main_image || (Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : null) || data.image || null;
+
+      let minPrice = parsedPrice;
+      let maxPrice = null;
+      let priceRangeText = null;
+
+      if (typeof rawPrice === 'string' && rawPrice.includes('-')) {
+        const parts = rawPrice.split('-');
+        const low = parsePriceValue(parts[0]);
+        const high = parsePriceValue(parts[1]);
+        if (low && high && high > low) {
+          minPrice = low;
+          maxPrice = high;
+          priceRangeText = `$${low.toFixed(2)} - $${high.toFixed(2)}`;
+        }
+      }
+
+      let storeName = 'Online Store';
+      try {
+        const host = new URL(targetUrl).hostname.replace('www.', '');
+        storeName = extractStoreName(host);
+      } catch (_) {}
+
+      return {
+        success: true,
+        url: targetUrl,
+        title: title || (storeName !== 'Online Store' ? `Item from ${storeName}` : 'Shared Product'),
+        storeName: storeName,
+        price: parsedPrice,
+        minPrice: minPrice,
+        maxPrice: maxPrice,
+        priceRangeText: priceRangeText,
+        imageUrl: image,
+        source: `crawlbase-${scraperName}`
+      };
+    } else {
+      const unblockedHtml = await cbResp.text();
+      debugInfo.crawlbaseHtmlLength = unblockedHtml ? unblockedHtml.length : 0;
+      if (!unblockedHtml || unblockedHtml.length < 50) {
+        debugInfo.crawlbaseError = 'Crawlbase returned empty HTML';
+        return null;
+      }
+
+      debugInfo.crawlbaseBypassed = true;
+      const parsed = await resolveUniversalProduct(targetUrl, debugInfo, unblockedHtml);
+      if (parsed) {
+        parsed.source = 'crawlbase-crawling-api';
+      }
+      return parsed;
+    }
+  } catch (err) {
+    debugInfo.crawlbaseError = err.message;
+    console.warn('Crawlbase request failed:', err.message);
+    return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -533,7 +676,51 @@ module.exports = async function handler(req, res) {
     }
 
     // 2. Native Multi-Store Engine (Client-Assisted edge fetch or Server direct fetch)
-    const result = await resolveUniversalProduct(targetUrl, debugInfo, clientHtml);
+    let result = await resolveUniversalProduct(targetUrl, debugInfo, clientHtml);
+
+    // 3. Phase 2: Smart Targeted Crawlbase Fallback Engine
+    // Triggers ONLY when:
+    // - Explicitly requested via crawlbase=1 or body.crawlbase=true, OR
+    // - Native resolution could not obtain a valid price AND CRAWLBASE_TOKEN is configured
+    const forceCrawlbase = (req.query.crawlbase === '1' || body?.crawlbase === true);
+    const priceMissing = (result.price === null || result.price === undefined || result.price <= 0);
+    const shouldTryCrawlbase = Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing));
+
+    if (shouldTryCrawlbase) {
+      debugInfo.crawlbaseTriggered = true;
+      debugInfo.crawlbaseTriggerReason = forceCrawlbase ? 'explicit-request' : 'missing-price';
+      try {
+        const cbResult = await fetchViaCrawlbase(targetUrl, debugInfo);
+        if (cbResult && cbResult.success) {
+          const hasCbPrice = (cbResult.price !== null && cbResult.price > 0);
+          const hasCbImage = Boolean(cbResult.imageUrl);
+          const hasBetterTitle = isValidTitle(cbResult.title) && (
+            !result.title ||
+            result.title.startsWith('Item from') ||
+            result.title === 'Shared Product' ||
+            hasCbPrice
+          );
+
+          result = {
+            success: true,
+            url: targetUrl,
+            title: hasBetterTitle ? cbResult.title : result.title,
+            storeName: cbResult.storeName || result.storeName,
+            price: hasCbPrice ? cbResult.price : result.price,
+            minPrice: (cbResult.minPrice !== null && cbResult.minPrice > 0) ? cbResult.minPrice : result.minPrice,
+            maxPrice: (cbResult.maxPrice !== null && cbResult.maxPrice > 0) ? cbResult.maxPrice : result.maxPrice,
+            priceRangeText: cbResult.priceRangeText || result.priceRangeText,
+            imageUrl: hasCbImage ? cbResult.imageUrl : result.imageUrl,
+            affiliateUrl: cbResult.affiliateUrl || result.affiliateUrl
+          };
+          debugInfo.crawlbaseMerged = true;
+        }
+      } catch (cbErr) {
+        debugInfo.crawlbaseFallbackError = cbErr.message;
+        console.warn('Crawlbase fallback failed:', cbErr.message);
+      }
+    }
+
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
   } catch (error) {
