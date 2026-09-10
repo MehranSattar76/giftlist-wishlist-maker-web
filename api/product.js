@@ -473,7 +473,12 @@ function parsePriceValue(priceVal) {
     return priceVal;
   }
   if (priceVal && typeof priceVal === 'object') {
-    const candidate = priceVal.value || priceVal.amount || priceVal.price;
+    const candidate = priceVal.currentPrice
+      || priceVal.price
+      || priceVal.value
+      || priceVal.amount
+      || priceVal.regularPrice
+      || priceVal.salePrice;
     return parsePriceValue(candidate);
   }
   if (typeof priceVal !== 'string') return null;
@@ -554,7 +559,8 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
       const title = (item.name || item.title || item.productTitle || item.product_name || '').trim();
       const rawPrice = item.price || item.rawPrice || item.currentPrice || item.salePrice;
       const parsedPrice = parsePriceValue(rawPrice);
-      const image = item.mainImage
+      const image = item.thumbnail
+        || item.mainImage
         || item.main_image
         || (Array.isArray(item.highResolutionImages) && item.highResolutionImages.length > 0 ? item.highResolutionImages[0] : null)
         || (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null)
