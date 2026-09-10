@@ -48,25 +48,29 @@ function extractEbayItemId(url) {
 
 async function resolveEbayProduct(itemId, rawUrl) {
   const token = await getEbayAccessToken();
-  const itemRestId = `v1|${itemId}|0`;
-  let apiUrl = `https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(itemRestId)}`;
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
+    'Accept': 'application/json'
+  };
 
-  let response = await fetch(apiUrl, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-      'Accept': 'application/json'
-    }
+  // Try 1: Official get_item_by_legacy_id for standard eBay listing numbers
+  let response = await fetch(`https://api.ebay.com/buy/browse/v1/item/get_item_by_legacy_id?legacy_item_id=${itemId}`, {
+    headers
   });
 
+  // Try 2: RESTful item ID format (v1|itemId|0)
   if (!response.ok) {
-    apiUrl = `https://api.ebay.com/buy/browse/v1/item/${itemId}`;
-    response = await fetch(apiUrl, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US',
-        'Accept': 'application/json'
-      }
+    const itemRestId = `v1|${itemId}|0`;
+    response = await fetch(`https://api.ebay.com/buy/browse/v1/item/${encodeURIComponent(itemRestId)}`, {
+      headers
+    });
+  }
+
+  // Try 3: Direct item ID
+  if (!response.ok) {
+    response = await fetch(`https://api.ebay.com/buy/browse/v1/item/${itemId}`, {
+      headers
     });
   }
 
