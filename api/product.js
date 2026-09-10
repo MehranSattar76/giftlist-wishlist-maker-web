@@ -275,6 +275,48 @@ async function resolveUniversalProduct(url) {
   };
 }
 
+async function resolveWithCrawlbase(url) {
+  const token = process.env.CRAWLBASE_TOKEN || '';
+  if (!token) return null;
+
+  try {
+    const endpoint = `https://api.crawlbase.com/?token=${token}&autoparse=true&url=${encodeURIComponent(url)}`;
+    const res = await fetch(endpoint, { signal: AbortSignal.timeout(12000) });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const body = data.body;
+    if (!body) return null;
+
+    const title = body.name || body.title;
+    if (!title || typeof title !== 'string' || !title.trim()) return null;
+
+    const priceVal = typeof body.price === 'number' ? body.price : parseFloat(body.price);
+    const image = body.mainImage || body.main_image || (Array.isArray(body.images) ? body.images[0] : null) || (Array.isArray(body.highResolutionImages) ? body.highResolutionImages[0] : null);
+
+    let storeName = 'Online Store';
+    if (url.includes('amazon') || url.includes('a.co') || url.includes('amzn.to')) storeName = 'Amazon';
+    else if (url.includes('walmart')) storeName = 'Walmart';
+    else if (url.includes('target')) storeName = 'Target';
+    else if (url.includes('bestbuy')) storeName = 'Best Buy';
+    else if (url.includes('etsy')) storeName = 'Etsy';
+
+    return {
+      success: true,
+      url: url,
+      title: title.trim(),
+      storeName: storeName,
+      price: !isNaN(priceVal) && priceVal > 0 ? priceVal : null,
+      minPrice: !isNaN(priceVal) && priceVal > 0 ? priceVal : null,
+      maxPrice: null,
+      priceRangeText: null,
+      imageUrl: image || null
+    };
+  } catch (err) {
+    console.warn('Crawlbase extraction failed:', err.message);
+    return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   // CORS configuration
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -299,7 +341,7 @@ module.exports = async function handler(req, res) {
   const trimmedUrl = url.trim();
 
   try {
-    // Check if URL is an eBay item
+    // 1. eBay Track (Uses official eBay Browse API - saves Crawlbase credits)
     const ebayItemId = extractEbayItemId(trimmedUrl);
     if (ebayItemId) {
       try {
@@ -310,8 +352,27 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Universal resolution for all other stores (or eBay fallback)
+    // 2. Amazon Track (Heavily anti-bot gated - prioritize Crawlbase parser if token is set)
+    if (trimmedUrl.includes('amazon.') || trimmedUrl.includes('a.co') || trimmedUrl.includes('amzn.to')) {
+      const cbResult = await resolveWithCrawlbase(trimmedUrl);
+      if (cbResult && cbResult.title) {
+        return res.status(200).json(cbResult);
+      }
+    }
+
+    // 3. Fast Universal resolution for other stores
     const result = await resolveUniversalProduct(trimmedUrl);
+    const hasMeaningfulTitle = result && result.title && !result.title.startsWith('Item from') && !result.title.startsWith('Shared Product');
+    if (hasMeaningfulTitle && (result.price != null || result.imageUrl != null)) {
+      return res.status(200).json(result);
+    }
+
+    // 4. Fallback to Crawlbase if direct extraction had missing details or was gated
+    const cbFallback = await resolveWithCrawlbase(trimmedUrl);
+    if (cbFallback && cbFallback.title) {
+      return res.status(200).json(cbFallback);
+    }
+
     return res.status(200).json(result);
   } catch (error) {
     console.error('Error resolving product metadata:', error);
