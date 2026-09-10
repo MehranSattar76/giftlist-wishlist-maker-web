@@ -550,10 +550,16 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
       debugInfo.crawlbaseJsonReceived = true;
       debugInfo.crawlbaseRawData = data;
 
-      const title = (data.title || data.name || '').trim();
-      const rawPrice = data.price;
+      const item = data.body || data;
+      const title = (item.name || item.title || item.productTitle || item.product_name || '').trim();
+      const rawPrice = item.price || item.rawPrice || item.currentPrice || item.salePrice;
       const parsedPrice = parsePriceValue(rawPrice);
-      const image = data.main_image || (Array.isArray(data.images) && data.images.length > 0 ? data.images[0] : null) || data.image || null;
+      const image = item.mainImage
+        || item.main_image
+        || (Array.isArray(item.highResolutionImages) && item.highResolutionImages.length > 0 ? item.highResolutionImages[0] : null)
+        || (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null)
+        || item.image
+        || null;
 
       let minPrice = parsedPrice;
       let maxPrice = null;
