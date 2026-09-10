@@ -227,15 +227,24 @@ async function resolveUniversalProduct(url) {
   const ogImage = extractMetaTag(html, 'og:image') || extractMetaTag(html, 'twitter:image');
   const ogPrice = extractMetaTag(html, 'og:price:amount') || extractMetaTag(html, 'product:price:amount');
 
-  // 3. Fallback Title
-  const titleTagMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const rawTitleTag = titleTagMatch ? titleTagMatch[1].replace(/[\r\n\t]+/g, ' ').trim() : null;
+  // 3. Smart Title Validation & Selection
+  function isValidTitle(t) {
+    if (!t || typeof t !== 'string') return false;
+    const lower = t.toLowerCase().trim();
+    if (lower.length < 3) return false;
+    if (lower.includes('undefined')) return false;
+    if (lower.includes('robot') || lower.includes('captcha')) return false;
+    if (lower.includes('access denied') || lower.includes('page not found') || lower.includes('error page')) return false;
+    if (lower.includes('item not available')) return false;
+    return true;
+  }
 
-  const finalTitle = jsonLd?.title
-    || ogTitle
-    || slugTitle
-    || (rawTitleTag && !rawTitleTag.toLowerCase().includes('robot') && !rawTitleTag.toLowerCase().includes('captcha') ? rawTitleTag : null)
-    || (storeName !== 'Online Store' ? `Item from ${storeName}` : 'Shared Product');
+  let finalTitle = null;
+  if (isValidTitle(jsonLd?.title)) finalTitle = jsonLd.title.trim();
+  else if (isValidTitle(ogTitle)) finalTitle = ogTitle.trim();
+  else if (slugTitle) finalTitle = slugTitle;
+  else if (isValidTitle(rawTitleTag)) finalTitle = rawTitleTag.trim();
+  else finalTitle = storeName !== 'Online Store' ? `Item from ${storeName}` : 'Shared Product';
 
   // 4. Fallback Image
   const finalImage = jsonLd?.image || ogImage || null;
