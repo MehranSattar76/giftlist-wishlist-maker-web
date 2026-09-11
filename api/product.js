@@ -13,19 +13,27 @@ let ebayTokenCache = {
   expiresAt: 0
 };
 
+// Container boot time for serverless lifecycle diagnostics
+const CONTAINER_BOOT_TIME = Date.now();
+const CONTAINER_ID = `cnt_${Math.random().toString(36).substring(2, 8)}`;
+
 // Rolling in-memory log buffer (stores last 50 requests across warm serverless invocations)
 const MAX_LOGS = 50;
 const requestLogs = [];
 
 function recordRequestLog(entry) {
-  requestLogs.unshift({
+  const logObj = {
     id: `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     timestamp: new Date().toISOString(),
+    containerId: CONTAINER_ID,
     ...entry
-  });
+  };
+  requestLogs.unshift(logObj);
   if (requestLogs.length > MAX_LOGS) {
     requestLogs.pop();
   }
+  // Permanent structured metric log to Vercel Runtime Logs dashboard
+  console.log('[API_METRIC]', JSON.stringify(logObj));
 }
 
 function renderLogsHtml(logs) {
@@ -340,36 +348,39 @@ function isValidTitle(t) {
 function extractAmazonPrice(html) {
   if (!html || typeof html !== 'string') return null;
 
-  // 1. Check embedded twister / buybox JSON (contains direct numbers, immune to HTML changes)
-  const twisterMatch = html.match(/"desktop_buybox_group[^"]*":\s*\[\s*\{[^}]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i)
-    || html.match(/"priceAmount":\s*(\d+(?:\.\d+)?)/i)
-    || html.match(/twister-plus-buying-options-price-data["'][^>]*>[\s\S]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i);
-  if (twisterMatch) {
-    const val = parseFloat(twisterMatch[1]);
-    if (!isNaN(val) && val > 0) return val;
-  }
-
-  // 2. Scoped Buybox containers (corePriceDisplay, corePrice_feature_div, apex_desktop, booksHeaderSection)
-  const buyboxContainerRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePrice_feature_div|apex_desktop|price_inside_buybox|apex_dp_inside_header|booksHeaderSection|tmmSwatches|subtotal-price-value|buyBoxAccordion)["'][\s\S]{0,1200}?class=["'](?:a-price\s*[^"']*|a-size-base\s*a-color-price[^"']*)["'][\s\S]{0,400}?(?:<span class=["']a-offscreen["']>\s*\$([0-9,.]+)|>\s*\$([0-9,.]+)\s*<\/span>)/i;
+  // 1. Scoped Buybox containers (Core price displays - desktop and mobile Chrome viewports)
+  // Mobile Amazon uses corePriceDisplay_mobile_feature_div, corePrice_mobile_feature_div, apex_mobile, newAccordionRow
+  const buyboxContainerRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePriceDisplay_mobile_feature_div|corePrice_feature_div|corePrice_mobile_feature_div|apex_desktop|apex_mobile|price_inside_buybox|priceblock_ourprice|priceblock_dealprice|mobilePrice_feature_div|apex_dp_inside_header|booksHeaderSection|tmmSwatches|buyBoxAccordion|newAccordionRow)["'][\s\S]{0,1400}?(?:class=["'](?:a-price\s*[^"']*|a-size-base\s*a-color-price[^"']*)["'][\s\S]{0,400}?(?:<span class=["']a-offscreen["']>\s*\$([0-9,.]+)|>\s*\$([0-9,.]+)\s*<\/span>)|(?:<span class=["']a-offscreen["']>\s*\$([0-9,.]+)))/i;
   const buyboxMatch = html.match(buyboxContainerRegex);
   if (buyboxMatch) {
-    const pStr = (buyboxMatch[1] || buyboxMatch[2] || '').replace(/,/g, '');
+    const pStr = (buyboxMatch[1] || buyboxMatch[2] || buyboxMatch[3] || '').replace(/,/g, '');
     const val = parseFloat(pStr);
     if (!isNaN(val) && val > 0) return val;
   }
 
-  // 3. Whole + Fraction inside buybox or core price display (allowing nested decimal span)
-  const wholeFractionRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePrice_feature_div|apex_desktop|price_inside_buybox)["'][\s\S]{0,1200}?class=["']a-price-whole["']>(\d+)<[\s\S]*?class=["']a-price-fraction["']>(\d+)</i;
+  // 2. Primary buybox price offscreen (aok-align-center, priceToPay, reinventPricePriceToPayMargin)
+  const offscreenMatch = html.match(/class=["'][^"']*(?:priceToPay|reinventPricePriceToPayMargin|aok-align-center)[^"']*["'][^>]*>[\s\S]{0,300}?<span class=["']a-offscreen["']>\s*\$([0-9,.]+)/i)
+    || html.match(/<span class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]*?<span class=["']a-offscreen["']>\s*\$([0-9,.]+)/i);
+  if (offscreenMatch) {
+    const val = parseFloat(offscreenMatch[1].replace(/,/g, ''));
+    if (!isNaN(val) && val > 0) return val;
+  }
+
+  // 3. Whole + Fraction inside buybox or core price display (desktop & mobile)
+  const wholeFractionRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePriceDisplay_mobile_feature_div|corePrice_feature_div|corePrice_mobile_feature_div|apex_desktop|apex_mobile|price_inside_buybox|mobilePrice_feature_div)["'][\s\S]{0,1400}?class=["']a-price-whole["']>(\d+)<[\s\S]*?class=["']a-price-fraction["']>(\d+)</i;
   const wfMatch = html.match(wholeFractionRegex);
   if (wfMatch) {
     const val = parseFloat(`${wfMatch[1]}.${wfMatch[2]}`);
     if (!isNaN(val) && val > 0) return val;
   }
 
-  // 4. Primary buybox price offscreen
-  const offscreenMatch = html.match(/class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]*?<span class=["']a-offscreen["']>\s*\$([0-9,.]+)/i);
-  if (offscreenMatch) {
-    const val = parseFloat(offscreenMatch[1].replace(/,/g, ''));
+  // 4. Check embedded twister / buybox JSON ONLY inside verified buybox or twister blocks
+  // (NEVER do un-scoped global priceAmount search which matches $2,500 Amazon Visa card promo)
+  const twisterMatch = html.match(/"desktop_buybox_group[^"]*":\s*\[\s*\{[^}]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i)
+    || html.match(/"mobile_buybox_group[^"]*":\s*\[\s*\{[^}]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i)
+    || html.match(/twister-plus-buying-options-price-data["'][^>]*>[\s\S]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i);
+  if (twisterMatch) {
+    const val = parseFloat(twisterMatch[1]);
     if (!isNaN(val) && val > 0) return val;
   }
 
@@ -380,7 +391,7 @@ function extractAmazonPrice(html) {
     if (!isNaN(val) && val > 0) return val;
   }
 
-  // 6. Generic core price whole + fraction across the top 500KB of page (ignoring installment rows)
+  // 6. Generic core price whole + fraction across top portion of page (capped to reasonable bounds)
   const genericWf = html.match(/class=["']a-price-whole["']>(\d+)<[\s\S]{0,80}?class=["']a-price-fraction["']>(\d+)</i);
   if (genericWf) {
     const val = parseFloat(`${genericWf[1]}.${genericWf[2]}`);
@@ -460,15 +471,35 @@ function extractStoreDetails(cleanUrl, html) {
 
   // 3. TARGET
   if (h.includes('target.')) {
-    const tcinMatch = cleanUrl.match(/\/A-(\d{7,10})/i);
-    const tcin = tcinMatch ? tcinMatch[1] : null;
-    const slugMatch = cleanUrl.match(/target\.[a-z.]+\/p\/([^/?#]+)\/-\/A-\d+/i);
+    const tcinMatch = cleanUrl.match(/\/A-(\d{7,10})/i) || cleanUrl.match(/\/p\/[^\/]+\/(\d{7,10})/i);
+    const tcin = tcinMatch ? (tcinMatch[1] || tcinMatch[2]) : null;
+    const slugMatch = cleanUrl.match(/target\.[a-z.]+\/p\/([^/?#]+)\/-\/A-\d+/i)
+      || cleanUrl.match(/target\.[a-z.]+\/p\/([^/?#]+)/i);
     const slugTitle = slugMatch ? cleanSlug(slugMatch[1]) : null;
 
     let targetPrice = null;
-    const priceMatch = html.match(/"current_retail"\s*:\s*(\d+(?:\.\d+)?)/i)
-      || html.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/i);
-    if (priceMatch) targetPrice = parseFloat(priceMatch[1]);
+
+    // 1. Rendered HTML price selectors (data-test="current-price" / "product-price")
+    const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price)["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice)[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*Price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+    if (dtPriceMatch) {
+      const p = parseFloat(dtPriceMatch[1].replace(/,/g, ''));
+      if (!isNaN(p) && p > 0) targetPrice = p;
+    }
+
+    // 2. Embedded JSON / Next.js serialized values in HTML
+    if (!targetPrice) {
+      const priceJsonMatch = html.match(/"formatted_current_price"\s*:\s*"\$([0-9,.]+)"/i)
+        || html.match(/"current_retail"\s*:\s*(\d+(?:\.\d+)?)/i)
+        || html.match(/"current_retail_min"\s*:\s*(\d+(?:\.\d+)?)/i)
+        || html.match(/"regular_price"\s*:\s*(\d+(?:\.\d+)?)/i)
+        || html.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/i);
+      if (priceJsonMatch) {
+        const p = parseFloat((priceJsonMatch[1] || '').replace(/,/g, ''));
+        if (!isNaN(p) && p > 0) targetPrice = p;
+      }
+    }
 
     let targetImage = null;
     const scene7Match = html.match(/https:\/\/target\.scene7\.com\/is\/image\/Target\/[a-zA-Z0-9_-]+/i);
@@ -719,13 +750,15 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
     apiUrl = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(targetUrl)}&scraper=${encodeURIComponent(scraperName)}${countryParam}`;
     debugInfo.crawlbaseMode = `scraper:${scraperName}`;
   } else {
-    apiUrl = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(targetUrl)}${countryParam}`;
-    debugInfo.crawlbaseMode = 'crawling-api-html';
+    const isTarget = targetUrl.toLowerCase().includes('target.com');
+    const autoParseParam = isTarget ? '&autoparse=true' : '';
+    apiUrl = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(targetUrl)}${autoParseParam}${countryParam}`;
+    debugInfo.crawlbaseMode = isTarget ? 'crawling-api-autoparse' : 'crawling-api-html';
   }
 
   try {
     const isDedicatedScraper = Boolean(scraperName);
-    const cbTimeout = isDedicatedScraper ? 28000 : 12000;
+    const cbTimeout = isDedicatedScraper ? 28000 : 15000;
     const cbResp = await fetch(apiUrl, {
       signal: AbortSignal.timeout(cbTimeout)
     });
@@ -740,12 +773,20 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
       return null;
     }
 
-    if (scraperName) {
-      const data = await cbResp.json();
-      debugInfo.crawlbaseJsonReceived = true;
-      debugInfo.crawlbaseRawData = data;
+    const contentType = cbResp.headers.get('content-type') || '';
+    const rawText = await cbResp.text();
+    let jsonData = null;
+    if (contentType.includes('application/json') || (rawText.trim().startsWith('{') && rawText.trim().endsWith('}'))) {
+      try {
+        jsonData = JSON.parse(rawText);
+      } catch (_) {}
+    }
 
-      const item = data.body || data;
+    if (scraperName || jsonData) {
+      debugInfo.crawlbaseJsonReceived = true;
+      debugInfo.crawlbaseRawData = jsonData;
+
+      const item = jsonData?.body || jsonData?.data || jsonData || {};
       const title = (item.name || item.title || item.productTitle || item.product_name || '').trim();
       const rawPrice = item.price || item.rawPrice || item.currentPrice || item.salePrice;
       const parsedPrice = parsePriceValue(rawPrice);
@@ -788,10 +829,10 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
         maxPrice: maxPrice,
         priceRangeText: priceRangeText,
         imageUrl: image,
-        source: `crawlbase-${scraperName}`
+        source: scraperName ? `crawlbase-${scraperName}` : 'crawlbase-autoparse'
       };
     } else {
-      const unblockedHtml = await cbResp.text();
+      const unblockedHtml = rawText;
       debugInfo.crawlbaseHtmlLength = unblockedHtml ? unblockedHtml.length : 0;
       if (!unblockedHtml || unblockedHtml.length < 50) {
         debugInfo.crawlbaseError = 'Crawlbase returned empty HTML';
@@ -835,6 +876,10 @@ module.exports = async function handler(req, res) {
       success: true,
       totalRecorded: requestLogs.length,
       maxBuffer: MAX_LOGS,
+      containerId: CONTAINER_ID,
+      containerBootTime: new Date(CONTAINER_BOOT_TIME).toISOString(),
+      containerUptimeSec: Math.floor((Date.now() - CONTAINER_BOOT_TIME) / 1000),
+      persistenceNotice: "In-memory logs reflect recent requests handled by this specific warm serverless container instance. For permanent unified log history across all container instances and regions, view the Vercel Project Dashboard -> Logs tab.",
       logs: requestLogs
     });
   }
@@ -931,11 +976,12 @@ module.exports = async function handler(req, res) {
     // - Native resolution could not obtain a valid price AND CRAWLBASE_TOKEN is configured
     const forceCrawlbase = (req.query.crawlbase === '1' || body?.crawlbase === true);
     const priceMissing = (result.price === null || result.price === undefined || result.price <= 0);
-    const shouldTryCrawlbase = Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing));
+    const suspiciousAmazonPrice = (result.storeName === 'Amazon' && result.price !== null && result.price > 500);
+    const shouldTryCrawlbase = Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing || suspiciousAmazonPrice));
 
     if (shouldTryCrawlbase) {
       debugInfo.crawlbaseTriggered = true;
-      debugInfo.crawlbaseTriggerReason = forceCrawlbase ? 'explicit-request' : 'missing-price';
+      debugInfo.crawlbaseTriggerReason = forceCrawlbase ? 'explicit-request' : (suspiciousAmazonPrice ? 'suspicious-high-price' : 'missing-price');
       try {
         const cbResult = await fetchViaCrawlbase(targetUrl, debugInfo);
         if (cbResult && cbResult.success) {
@@ -965,6 +1011,43 @@ module.exports = async function handler(req, res) {
       } catch (cbErr) {
         debugInfo.crawlbaseFallbackError = cbErr.message;
         console.warn('Crawlbase fallback failed:', cbErr.message);
+      }
+    }
+
+    // 4. Target Dedicated RedSky Aggregation Fallback (via Crawlbase proxy)
+    // If Target price is still missing after HTML extraction and autoparse, query Target's official RedSky API
+    const isTargetStillMissingPrice = (result.storeName === 'Target' && (result.price === null || result.price <= 0));
+    const targetTcinMatch = targetUrl.match(/\/A-(\d{7,10})/i) || targetUrl.match(/\/p\/[^\/]+\/(\d{7,10})/i);
+    const targetTcin = targetTcinMatch ? (targetTcinMatch[1] || targetTcinMatch[2]) : null;
+
+    if (isTargetStillMissingPrice && targetTcin && CRAWLBASE_TOKEN) {
+      debugInfo.targetRedskyTriggered = true;
+      try {
+        const redskyTargetUrl = `https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1?key=9f36aeafbe60771e321a7cc95a78140772ab3e96&tcin=${targetTcin}&pricing_store_id=3991&has_pricing_store_id=true&is_override_store=false`;
+        const cbRedskyApi = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(redskyTargetUrl)}`;
+        const redskyResp = await fetch(cbRedskyApi, { signal: AbortSignal.timeout(14000) });
+        if (redskyResp.ok) {
+          const rJson = await redskyResp.json();
+          const prodData = rJson?.data?.product || rJson?.product;
+          const prodPrice = prodData?.price;
+          const currentRetail = prodPrice?.current_retail || prodPrice?.current_retail_min || prodPrice?.reg_retail;
+          if (currentRetail && typeof currentRetail === 'number' && currentRetail > 0) {
+            result.price = currentRetail;
+            result.minPrice = prodPrice?.current_retail_min || currentRetail;
+            result.maxPrice = prodPrice?.current_retail_max || null;
+            if (result.minPrice && result.maxPrice && result.maxPrice > result.minPrice) {
+              result.priceRangeText = `$${result.minPrice.toFixed(2)} - $${result.maxPrice.toFixed(2)}`;
+            }
+            if (!result.imageUrl && prodData?.item?.enrichment?.images?.primary_image_url) {
+              result.imageUrl = prodData.item.enrichment.images.primary_image_url;
+            }
+            debugInfo.targetRedskySuccess = true;
+            debugInfo.targetRedskyPrice = currentRetail;
+          }
+        }
+      } catch (rErr) {
+        debugInfo.targetRedskyError = rErr.message;
+        console.warn('Target Redsky aggregation fallback failed:', rErr.message);
       }
     }
 
