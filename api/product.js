@@ -480,9 +480,8 @@ function extractStoreDetails(cleanUrl, html) {
     let targetPrice = null;
 
     // 1. Rendered HTML price selectors (data-test="current-price" / "product-price")
-    const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price)["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice)[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*Price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+    const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice)[^"']*["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i);
     if (dtPriceMatch) {
       const p = parseFloat(dtPriceMatch[1].replace(/,/g, ''));
       if (!isNaN(p) && p > 0) targetPrice = p;
@@ -493,11 +492,18 @@ function extractStoreDetails(cleanUrl, html) {
       const priceJsonMatch = html.match(/"formatted_current_price"\s*:\s*"\$([0-9,.]+)"/i)
         || html.match(/"current_retail"\s*:\s*(\d+(?:\.\d+)?)/i)
         || html.match(/"current_retail_min"\s*:\s*(\d+(?:\.\d+)?)/i)
-        || html.match(/"regular_price"\s*:\s*(\d+(?:\.\d+)?)/i)
-        || html.match(/"price"\s*:\s*(\d+(?:\.\d+)?)/i);
+        || html.match(/"reg_retail"\s*:\s*(\d+(?:\.\d+)?)/i);
       if (priceJsonMatch) {
         const p = parseFloat((priceJsonMatch[1] || '').replace(/,/g, ''));
         if (!isNaN(p) && p > 0) targetPrice = p;
+      }
+    }
+
+    // 3. Guard against false $35 price from Target free shipping threshold promo
+    if (targetPrice === 35) {
+      const hasReal35PriceTag = html.match(/data-test=["'](?:current-price|product-price)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$35(?:\.00)?\b/i);
+      if (!hasReal35PriceTag) {
+        targetPrice = null;
       }
     }
 
@@ -716,9 +722,6 @@ function getCrawlbaseScraperName(url) {
     if (host.includes('amazon.') || host.includes('amzn.')) {
       return 'amazon-product-details';
     }
-    if (host.includes('walmart.')) {
-      return 'walmart-product-details';
-    }
     if (host.includes('bestbuy.')) {
       return 'bestbuy-product-details';
     }
@@ -758,7 +761,7 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
 
   try {
     const isDedicatedScraper = Boolean(scraperName);
-    const cbTimeout = isDedicatedScraper ? 28000 : 15000;
+    const cbTimeout = isDedicatedScraper ? 35000 : 18000;
     const cbResp = await fetch(apiUrl, {
       signal: AbortSignal.timeout(cbTimeout)
     });
@@ -786,6 +789,11 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
       debugInfo.crawlbaseJsonReceived = true;
       debugInfo.crawlbaseRawData = jsonData;
 
+      if (jsonData?.original_status >= 400) {
+        debugInfo.crawlbaseError = `Crawlbase original status ${jsonData.original_status}`;
+        return null;
+      }
+
       const item = jsonData?.body || jsonData?.data || jsonData || {};
       const title = (item.name || item.title || item.productTitle || item.product_name || '').trim();
       const rawPrice = item.price || item.rawPrice || item.currentPrice || item.salePrice;
@@ -797,6 +805,12 @@ async function fetchViaCrawlbase(targetUrl, debugInfo = {}) {
         || (Array.isArray(item.images) && item.images.length > 0 ? item.images[0] : null)
         || item.image
         || null;
+
+      // Reject empty or unhelpful Crawlbase payloads
+      if (!title && !parsedPrice && !image) {
+        debugInfo.crawlbaseEmptyResponse = true;
+        return null;
+      }
 
       let minPrice = parsedPrice;
       let maxPrice = null;
@@ -987,7 +1001,9 @@ module.exports = async function handler(req, res) {
         if (cbResult && cbResult.success) {
           const hasCbPrice = (cbResult.price !== null && cbResult.price > 0);
           const hasCbImage = Boolean(cbResult.imageUrl);
-          const hasBetterTitle = isValidTitle(cbResult.title) && (
+          const hasBetterTitle = isValidTitle(cbResult.title) &&
+            !cbResult.title.startsWith('Item from') &&
+            cbResult.title !== 'Shared Product' && (
             !result.title ||
             result.title.startsWith('Item from') ||
             result.title === 'Shared Product' ||
@@ -1023,33 +1039,61 @@ module.exports = async function handler(req, res) {
     if (isTargetStillMissingPrice && targetTcin && CRAWLBASE_TOKEN) {
       debugInfo.targetRedskyTriggered = true;
       try {
-        const redskyTargetUrl = `https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1?key=9f36aeafbe60771e321a7cc95a78140772ab3e96&tcin=${targetTcin}&pricing_store_id=3991&has_pricing_store_id=true&is_override_store=false`;
-        const cbRedskyApi = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(redskyTargetUrl)}&country=US`;
-        const redskyResp = await fetch(cbRedskyApi, { signal: AbortSignal.timeout(14000) });
-        debugInfo.targetRedskyStatus = redskyResp.status;
-        const respText = await redskyResp.text();
-        debugInfo.targetRedskyResponse = respText.slice(0, 300);
-        if (redskyResp.ok) {
-          try {
-            const rJson = JSON.parse(respText);
-            const prodData = rJson?.data?.product || rJson?.product;
-            const prodPrice = prodData?.price;
-            const currentRetail = prodPrice?.current_retail || prodPrice?.current_retail_min || prodPrice?.reg_retail;
-            if (currentRetail && typeof currentRetail === 'number' && currentRetail > 0) {
-              result.price = currentRetail;
-              result.minPrice = prodPrice?.current_retail_min || currentRetail;
-              result.maxPrice = prodPrice?.current_retail_max || null;
-              if (result.minPrice && result.maxPrice && result.maxPrice > result.minPrice) {
-                result.priceRangeText = `$${result.minPrice.toFixed(2)} - $${result.maxPrice.toFixed(2)}`;
+        const redskyUrls = [
+          `https://redsky.target.com/redsky_aggregations/v1/web/product_summary_with_fulfillment_v1?key=9f36aeafbe60771e321a7cc95a78140772ab3e96&tcins=${targetTcin}&store_id=3991`,
+          `https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1?key=9f36aeafbe60771e321a7cc95a78140772ab3e96&tcin=${targetTcin}&store_id=3991&pricing_store_id=3991&has_pricing_store_id=true&is_override_store=false`
+        ];
+
+        for (const redskyTargetUrl of redskyUrls) {
+          const cbRedskyApi = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(redskyTargetUrl)}&country=US`;
+          const redskyResp = await fetch(cbRedskyApi, { signal: AbortSignal.timeout(14000) });
+          debugInfo.targetRedskyStatus = redskyResp.status;
+          if (redskyResp.ok) {
+            const respText = await redskyResp.text();
+            debugInfo.targetRedskyResponse = respText.slice(0, 300);
+            try {
+              const rJson = JSON.parse(respText);
+
+              // 1. Schema: product_summary_with_fulfillment_v1
+              const summaryItem = rJson?.data?.product_summaries?.[0];
+              const summaryPrice = summaryItem?.price;
+              const summaryRetail = summaryPrice?.current_retail || parsePriceValue(summaryPrice?.formatted_current_price);
+              if (summaryRetail && summaryRetail > 0) {
+                result.price = summaryRetail;
+                result.minPrice = summaryPrice?.current_retail_min || summaryRetail;
+                result.maxPrice = summaryPrice?.current_retail_max || null;
+                if (result.minPrice && result.maxPrice && result.maxPrice > result.minPrice) {
+                  result.priceRangeText = `$${result.minPrice.toFixed(2)} - $${result.maxPrice.toFixed(2)}`;
+                }
+                if (!result.imageUrl && summaryItem?.images?.primary_image_url) {
+                  result.imageUrl = summaryItem.images.primary_image_url;
+                }
+                debugInfo.targetRedskySuccess = true;
+                debugInfo.targetRedskyPrice = summaryRetail;
+                break;
               }
-              if (!result.imageUrl && prodData?.item?.enrichment?.images?.primary_image_url) {
-                result.imageUrl = prodData.item.enrichment.images.primary_image_url;
+
+              // 2. Schema: pdp_client_v1
+              const prodData = rJson?.data?.product || rJson?.product;
+              const prodPrice = prodData?.price;
+              const currentRetail = prodPrice?.current_retail || prodPrice?.current_retail_min || prodPrice?.reg_retail || parsePriceValue(prodPrice?.formatted_current_price);
+              if (currentRetail && typeof currentRetail === 'number' && currentRetail > 0) {
+                result.price = currentRetail;
+                result.minPrice = prodPrice?.current_retail_min || currentRetail;
+                result.maxPrice = prodPrice?.current_retail_max || null;
+                if (result.minPrice && result.maxPrice && result.maxPrice > result.minPrice) {
+                  result.priceRangeText = `$${result.minPrice.toFixed(2)} - $${result.maxPrice.toFixed(2)}`;
+                }
+                if (!result.imageUrl && prodData?.item?.enrichment?.images?.primary_image_url) {
+                  result.imageUrl = prodData.item.enrichment.images.primary_image_url;
+                }
+                debugInfo.targetRedskySuccess = true;
+                debugInfo.targetRedskyPrice = currentRetail;
+                break;
               }
-              debugInfo.targetRedskySuccess = true;
-              debugInfo.targetRedskyPrice = currentRetail;
+            } catch (pErr) {
+              debugInfo.targetRedskyParseError = pErr.message;
             }
-          } catch (pErr) {
-            debugInfo.targetRedskyParseError = pErr.message;
           }
         }
       } catch (rErr) {
