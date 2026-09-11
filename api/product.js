@@ -336,8 +336,7 @@ function isValidTitle(t) {
   if (!t || typeof t !== 'string') return false;
   const lower = t.toLowerCase().trim();
   if (lower.length < 3) return false;
-  if (lower.startsWith('undefined')) return false;
-  if (lower.includes('undefined : target')) return false;
+  if (lower === 'undefined' || lower.startsWith('undefined') || lower.includes('undefined : target') || lower.includes('undefined: target')) return false;
   if (lower.includes('robot') || lower.includes('captcha') || lower.includes('human')) return false;
   if (lower.includes('access denied') || lower.includes('page not found') || lower.includes('error page')) return false;
   if (lower.includes('item not available')) return false;
@@ -351,7 +350,7 @@ function extractAmazonPrice(html) {
 
   // 1. Scoped Buybox containers (Core price displays - desktop and mobile Chrome viewports)
   // Mobile Amazon uses corePriceDisplay_mobile_feature_div, corePrice_mobile_feature_div, apex_mobile, newAccordionRow
-  const buyboxContainerRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePriceDisplay_mobile_feature_div|corePrice_feature_div|corePrice_mobile_feature_div|apex_desktop|apex_mobile|price_inside_buybox|priceblock_ourprice|priceblock_dealprice|mobilePrice_feature_div|apex_dp_inside_header|booksHeaderSection|tmmSwatches|buyBoxAccordion|newAccordionRow)["'][\s\S]{0,1400}?(?:class=["'](?:a-price\s*[^"']*|a-size-base\s*a-color-price[^"']*)["'][\s\S]{0,400}?(?:<span class=["']a-offscreen["']>\s*\$([0-9,.]+)|>\s*\$([0-9,.]+)\s*<\/span>)|(?:<span class=["']a-offscreen["']>\s*\$([0-9,.]+)))/i;
+  const buyboxContainerRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePriceDisplay_mobile_feature_div|corePrice_feature_div|corePrice_mobile_feature_div|apex_desktop|apex_mobile|price_inside_buybox|priceblock_ourprice|priceblock_dealprice|mobilePrice_feature_div|apex_dp_inside_header|booksHeaderSection|tmmSwatches|buyBoxAccordion|newAccordionRow)["'][\s\S]{0,1400}?(?:class=["'](?:a-price\s*[^"']*|a-size-base\s*a-color-price[^"']*)["'][\s\S]{0,400}?(?:<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)|>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)\s*<\/span>)|(?:<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)))/i;
   const buyboxMatch = html.match(buyboxContainerRegex);
   if (buyboxMatch) {
     const pStr = (buyboxMatch[1] || buyboxMatch[2] || buyboxMatch[3] || '').replace(/,/g, '');
@@ -360,8 +359,8 @@ function extractAmazonPrice(html) {
   }
 
   // 2. Primary buybox price offscreen (aok-align-center, priceToPay, reinventPricePriceToPayMargin)
-  const offscreenMatch = html.match(/class=["'][^"']*(?:priceToPay|reinventPricePriceToPayMargin|aok-align-center)[^"']*["'][^>]*>[\s\S]{0,300}?<span class=["']a-offscreen["']>\s*\$([0-9,.]+)/i)
-    || html.match(/<span class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]*?<span class=["']a-offscreen["']>\s*\$([0-9,.]+)/i);
+  const offscreenMatch = html.match(/class=["'][^"']*(?:priceToPay|reinventPricePriceToPayMargin|aok-align-center)[^"']*["'][^>]*>[\s\S]{0,300}?<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)/i)
+    || html.match(/<span class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]*?<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)/i);
   if (offscreenMatch) {
     const val = parseFloat(offscreenMatch[1].replace(/,/g, ''));
     if (!isNaN(val) && val > 0) return val;
@@ -386,7 +385,7 @@ function extractAmazonPrice(html) {
   }
 
   // 5. Books slot-price
-  const slotMatch = html.match(/class=["']slot-price["'][^>]*>[\s\S]*?class=["'][^"']*a-color-price[^"']*["']>\s*\$([0-9,.]+)/i);
+  const slotMatch = html.match(/class=["']slot-price["'][^>]*>[\s\S]*?class=["'][^"']*a-color-price[^"']*["']>\s*(?:US\s*)?(?:\$|USD\s*)?\s*([0-9,.]+)/i);
   if (slotMatch) {
     const val = parseFloat(slotMatch[1].replace(/,/g, ''));
     if (!isNaN(val) && val > 0) return val;
@@ -606,6 +605,12 @@ async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null)
       'Sec-Fetch-User': '?1',
       'Upgrade-Insecure-Requests': '1'
     };
+
+    if (host.includes('amazon.') || host.includes('a.co') || host.includes('amzn.to')) {
+      fetchHeaders['Cookie'] = 'i18n-prefs=USD; lc-main=en_US;';
+    } else if (host.includes('etsy.')) {
+      fetchHeaders['Cookie'] = 'user_currency_code=USD;';
+    }
 
     try {
       const response = await fetch(cleanUrl, {
