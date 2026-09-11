@@ -920,7 +920,15 @@ module.exports = async function handler(req, res) {
     } catch (_) {}
   }
 
-  const targetUrl = (body?.url || req.query.url || '').trim();
+  let rawUrl = (body?.url || req.query.url || '').trim();
+  const urlMatch = rawUrl.match(/https?:\/\/[^\s]+/i);
+  let targetUrl = urlMatch ? urlMatch[0] : rawUrl;
+  // Strip trailing punctuation often copied along with URLs
+  targetUrl = targetUrl.replace(/[.,;:)\]>"'}]+$/, '').trim();
+  if (targetUrl && !/^https?:\/\//i.test(targetUrl) && targetUrl.includes('.')) {
+    targetUrl = `https://${targetUrl}`;
+  }
+
   const clientHtml = (body?.html && typeof body.html === 'string') ? body.html : null;
   const isDebug = (body?.debug === '1' || req.query.debug === '1');
   const ebaySearch = body?.ebaySearch || req.query.ebaySearch;
@@ -951,6 +959,16 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // If shortlink (ebay.to, ebay.io, a.co, amzn.to, bit.ly, etc.), follow redirect to destination
+    if (/\b(?:ebay\.(?:to|io)|a\.co|amzn\.to|bit\.ly|tinyurl\.com)\b/i.test(targetUrl)) {
+      try {
+        const headResp = await fetch(targetUrl, { method: 'HEAD', redirect: 'follow' });
+        if (headResp && headResp.url && headResp.url !== targetUrl) {
+          targetUrl = headResp.url;
+        }
+      } catch (_) {}
+    }
+
     // 1. eBay Track (Uses official eBay Developer Browse API - 100% reliable)
     const ebayItemId = extractEbayItemId(targetUrl);
     if (ebayItemId) {
