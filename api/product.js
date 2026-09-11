@@ -6,6 +6,7 @@
 const EBAY_CLIENT_ID = process.env.EBAY_CLIENT_ID || '';
 const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET || '';
 const CRAWLBASE_TOKEN = process.env.CRAWLBASE_TOKEN || '';
+const SCRAPFLY_KEY = process.env.SCRAPFLY_KEY || 'scp-live-ae6420642ef04af5b55129940ff4e1ea';
 
 // In-memory token cache across serverless warm invocations
 let ebayTokenCache = {
@@ -988,10 +989,11 @@ module.exports = async function handler(req, res) {
     // Triggers ONLY when:
     // - Explicitly requested via crawlbase=1 or body.crawlbase=true, OR
     // - Native resolution could not obtain a valid price AND CRAWLBASE_TOKEN is configured
+    const isEtsyUrl = targetUrl.toLowerCase().includes('etsy.com');
     const forceCrawlbase = (req.query.crawlbase === '1' || body?.crawlbase === true);
     const priceMissing = (result.price === null || result.price === undefined || result.price <= 0);
     const suspiciousAmazonPrice = (result.storeName === 'Amazon' && result.price !== null && result.price > 500);
-    const shouldTryCrawlbase = Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing || suspiciousAmazonPrice));
+    const shouldTryCrawlbase = Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing || suspiciousAmazonPrice) && !isEtsyUrl);
 
     if (shouldTryCrawlbase) {
       debugInfo.crawlbaseTriggered = true;
@@ -1102,6 +1104,58 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // 5. Phase 3: Etsy Dedicated Scrapfly ASP Fallback
+    // Triggers ONLY for Etsy when price or image is missing or title is generic
+    const isEtsyMissingData = isEtsyUrl && (result.price === null || !result.imageUrl || !isValidTitle(result.title) || result.title.startsWith('Item from'));
+    if (isEtsyMissingData && SCRAPFLY_KEY) {
+      debugInfo.scrapflyTriggered = true;
+      try {
+        const scrapflyParams = new URLSearchParams({
+          key: SCRAPFLY_KEY,
+          url: targetUrl,
+          asp: 'true',
+          country: 'us'
+        });
+        const scrapflyEndpoint = `https://api.scrapfly.io/scrape?${scrapflyParams.toString()}`;
+        const sfResp = await fetch(scrapflyEndpoint, { signal: AbortSignal.timeout(22000) });
+        debugInfo.scrapflyStatus = sfResp.status;
+        const sfCost = sfResp.headers.get('X-Scrapfly-Api-Cost');
+        if (sfCost) debugInfo.scrapflyCost = sfCost;
+
+        if (sfResp.ok) {
+          const sfJson = await sfResp.json();
+          const sfResult = sfJson?.result || {};
+          debugInfo.scrapflyUpstreamStatus = sfResult?.status_code;
+          const unblockedHtml = sfResult?.content || '';
+          if (unblockedHtml && unblockedHtml.length > 500 && sfResult?.status_code === 200) {
+            const sfParsed = await resolveUniversalProduct(targetUrl, debugInfo, unblockedHtml);
+            if (sfParsed) {
+              result = {
+                success: true,
+                url: targetUrl,
+                title: (isValidTitle(sfParsed.title) && !sfParsed.title.startsWith('Item from')) ? sfParsed.title : result.title,
+                storeName: 'Etsy',
+                price: (sfParsed.price !== null && sfParsed.price > 0) ? sfParsed.price : result.price,
+                minPrice: sfParsed.minPrice || result.minPrice,
+                maxPrice: sfParsed.maxPrice || result.maxPrice,
+                priceRangeText: sfParsed.priceRangeText || result.priceRangeText,
+                imageUrl: sfParsed.imageUrl || result.imageUrl,
+                affiliateUrl: sfParsed.affiliateUrl || result.affiliateUrl
+              };
+              result.source = 'scrapfly-asp-unblocker';
+              debugInfo.scrapflyMerged = true;
+            }
+          }
+        } else {
+          const errText = await sfResp.text();
+          debugInfo.scrapflyError = `HTTP ${sfResp.status}: ${errText.slice(0, 150)}`;
+        }
+      } catch (sfErr) {
+        debugInfo.scrapflyError = sfErr.message;
+        console.warn('Scrapfly Etsy fallback failed:', sfErr.message);
+      }
+    }
+
     const durationMs = Date.now() - startTime;
     recordRequestLog({
       method: req.method,
@@ -1113,6 +1167,9 @@ module.exports = async function handler(req, res) {
       crawlbaseTriggered: Boolean(debugInfo.crawlbaseTriggered),
       crawlbaseMode: debugInfo.crawlbaseMode || null,
       crawlbaseStatus: debugInfo.crawlbaseStatus || null,
+      scrapflyTriggered: Boolean(debugInfo.scrapflyTriggered),
+      scrapflyCost: debugInfo.scrapflyCost || null,
+      scrapflyStatus: debugInfo.scrapflyStatus || null,
       title: result.title,
       price: result.price,
       hasImage: Boolean(result.imageUrl),
