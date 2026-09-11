@@ -1024,25 +1024,32 @@ module.exports = async function handler(req, res) {
       debugInfo.targetRedskyTriggered = true;
       try {
         const redskyTargetUrl = `https://redsky.target.com/redsky_aggregations/v1/web/pdp_client_v1?key=9f36aeafbe60771e321a7cc95a78140772ab3e96&tcin=${targetTcin}&pricing_store_id=3991&has_pricing_store_id=true&is_override_store=false`;
-        const cbRedskyApi = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(redskyTargetUrl)}`;
+        const cbRedskyApi = `https://api.crawlbase.com/?token=${CRAWLBASE_TOKEN}&url=${encodeURIComponent(redskyTargetUrl)}&country=US`;
         const redskyResp = await fetch(cbRedskyApi, { signal: AbortSignal.timeout(14000) });
+        debugInfo.targetRedskyStatus = redskyResp.status;
+        const respText = await redskyResp.text();
+        debugInfo.targetRedskyResponse = respText.slice(0, 300);
         if (redskyResp.ok) {
-          const rJson = await redskyResp.json();
-          const prodData = rJson?.data?.product || rJson?.product;
-          const prodPrice = prodData?.price;
-          const currentRetail = prodPrice?.current_retail || prodPrice?.current_retail_min || prodPrice?.reg_retail;
-          if (currentRetail && typeof currentRetail === 'number' && currentRetail > 0) {
-            result.price = currentRetail;
-            result.minPrice = prodPrice?.current_retail_min || currentRetail;
-            result.maxPrice = prodPrice?.current_retail_max || null;
-            if (result.minPrice && result.maxPrice && result.maxPrice > result.minPrice) {
-              result.priceRangeText = `$${result.minPrice.toFixed(2)} - $${result.maxPrice.toFixed(2)}`;
+          try {
+            const rJson = JSON.parse(respText);
+            const prodData = rJson?.data?.product || rJson?.product;
+            const prodPrice = prodData?.price;
+            const currentRetail = prodPrice?.current_retail || prodPrice?.current_retail_min || prodPrice?.reg_retail;
+            if (currentRetail && typeof currentRetail === 'number' && currentRetail > 0) {
+              result.price = currentRetail;
+              result.minPrice = prodPrice?.current_retail_min || currentRetail;
+              result.maxPrice = prodPrice?.current_retail_max || null;
+              if (result.minPrice && result.maxPrice && result.maxPrice > result.minPrice) {
+                result.priceRangeText = `$${result.minPrice.toFixed(2)} - $${result.maxPrice.toFixed(2)}`;
+              }
+              if (!result.imageUrl && prodData?.item?.enrichment?.images?.primary_image_url) {
+                result.imageUrl = prodData.item.enrichment.images.primary_image_url;
+              }
+              debugInfo.targetRedskySuccess = true;
+              debugInfo.targetRedskyPrice = currentRetail;
             }
-            if (!result.imageUrl && prodData?.item?.enrichment?.images?.primary_image_url) {
-              result.imageUrl = prodData.item.enrichment.images.primary_image_url;
-            }
-            debugInfo.targetRedskySuccess = true;
-            debugInfo.targetRedskyPrice = currentRetail;
+          } catch (pErr) {
+            debugInfo.targetRedskyParseError = pErr.message;
           }
         }
       } catch (rErr) {
