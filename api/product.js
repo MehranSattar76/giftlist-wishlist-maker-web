@@ -297,6 +297,46 @@ function cleanSlug(slug) {
   return decoded.split(' ').map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '').join(' ');
 }
 
+function decodeHtmlEntities(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/')
+    .replace(/&#8211;/g, '–')
+    .replace(/&#8212;/g, '—')
+    .replace(/&#8216;/g, '‘')
+    .replace(/&#8217;/g, '’')
+    .replace(/&#8220;/g, '“')
+    .replace(/&#8221;/g, '”')
+    .replace(/&#8482;/g, '™')
+    .replace(/&#174;/g, '®')
+    .replace(/&trade;/gi, '™')
+    .replace(/&reg;/gi, '®')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&#(\d+);/g, (_, dec) => {
+      try { return String.fromCharCode(parseInt(dec, 10)); } catch (_) { return _; }
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+      try { return String.fromCharCode(parseInt(hex, 16)); } catch (_) { return _; }
+    })
+    .replace(/\s*:\s*Target\s*$/i, '')
+    .replace(/\s*-\s*Target\s*$/i, '')
+    .replace(/\s*\|\s*Target\s*$/i, '')
+    .replace(/\s*-\s*Best Buy\s*$/i, '')
+    .replace(/\s*\|\s*Best Buy\s*$/i, '')
+    .replace(/\s*\|\s*Etsy\s*$/i, '')
+    .replace(/\s*-\s*Walmart(?:\.com)?\s*$/i, '')
+    .replace(/\s*:\s*Amazon\.com.*$/i, '')
+    .replace(/\s*\|\s*Amazon\.com.*$/i, '')
+    .trim();
+}
+
 function extractStoreName(host) {
   const h = host.toLowerCase();
   if (h.includes('amazon') || h.includes('a.co') || h.includes('amzn.to')) return 'Amazon';
@@ -519,7 +559,10 @@ function extractStoreDetails(cleanUrl, html) {
     // 1. Rendered HTML price selectors (data-test="current-price" / "product-price")
     const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price|price-display)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
       || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice|PriceSummary)[^"']*["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
-      || html.match(/id=["']pdp-pricing-standard["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+      || html.match(/id=["']pdp-pricing-standard["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+      || html.match(/span[^\w>]*data-test=["']product-price["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+      || html.match(/span[^\w>]*aria-label=["']\$([0-9,.]+) current price["']/i)
+      || html.match(/class=["'][^"']*heading-medium[^"']*["'][^>]*>\$([0-9,.]+)/i);
     if (dtPriceMatch) {
       const p = parseFloat((dtPriceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) targetPrice = p;
@@ -569,8 +612,10 @@ function extractStoreDetails(cleanUrl, html) {
     let bbyPrice = null;
     const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
       || html.match(/"customerPrice"\s*:\s*(\d+(?:\.\d+)?)/i)
+      || html.match(/class=["'][^"']*priceView-hero-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
       || html.match(/class=["'][^"']*priceView-customer-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+      || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*large-amount[^"']*["'][^>]*>[\s\S]*?\$?([0-9,.]+)/i);
     if (priceMatch) {
       const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) bbyPrice = p;
@@ -585,13 +630,23 @@ function extractStoreDetails(cleanUrl, html) {
     const listingId = listingMatch ? listingMatch[1] : null;
     const slugTitle = listingMatch && listingMatch[2] ? cleanSlug(listingMatch[2]) : null;
 
+    let etsyImage = null;
+    const etsyImgMatch = html.match(/meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i)
+      || html.match(/<img[^>]*class=["'][^"']*(?:wt-max-width-full|listing-page-image)[^"']*["'][^>]*src=["']([^"']+)["']/i);
+    if (etsyImgMatch) etsyImage = etsyImgMatch[1];
+
     let etsyPrice = null;
     const priceMatch = html.match(/meta[^>]*property=["']product:price:amount["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
       || html.match(/class=["']currency-value["']>(\d+(?:\.\d+)?)<\/span>/i)
-      || html.match(/class=["'][^"']*wt-text-title-larger[^"']*["'][^>]*>[\s\S]*?\$(\d+(?:\.\d+)?)/i);
-    if (priceMatch) etsyPrice = parseFloat(priceMatch[1]);
+      || html.match(/class=["'][^"']*wt-text-title-larger[^"']*["'][^>]*>[\s\S]*?\$(\d+(?:\.\d+)?)/i)
+      || html.match(/"price"\s*:\s*\{"amount"\s*:\s*(\d+(?:\.\d+)?)/i)
+      || html.match(/class=["'][^"']*wt-mr-xs-1[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+    if (priceMatch) {
+      const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
+      if (!isNaN(p) && p > 0) etsyPrice = p;
+    }
 
-    return { storeName: 'Etsy', listingId, slugTitle, storePrice: etsyPrice };
+    return { storeName: 'Etsy', listingId, slugTitle, storePrice: etsyPrice, storeImage: etsyImage };
   }
 
   // 6. EBAY
@@ -700,6 +755,10 @@ async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null)
     const rawTitleTag = titleMatch ? titleMatch[1].replace(/[\r\n\t]+/g, ' ').trim() : null;
     if (isValidTitle(rawTitleTag)) finalTitle = rawTitleTag;
     else finalTitle = storeName !== 'Online Store' ? `Item from ${storeName}` : 'Shared Product';
+  }
+
+  if (finalTitle) {
+    finalTitle = decodeHtmlEntities(finalTitle);
   }
 
   // 5. Resolve Image (Priority: Store Image -> JSON-LD -> OpenGraph -> CDN Fallback)
