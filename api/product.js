@@ -556,16 +556,28 @@ function extractStoreDetails(cleanUrl, html) {
 
     let targetPrice = null;
 
-    // 1. Rendered HTML price selectors (data-test="current-price" / "product-price")
-    const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price|price-display)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice|PriceSummary)[^"']*["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
-      || html.match(/id=["']pdp-pricing-standard["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/span[^\w>]*data-test=["']product-price["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/span[^\w>]*aria-label=["']\$([0-9,.]+) current price["']/i)
-      || html.match(/class=["'][^"']*heading-medium[^"']*["'][^>]*>\$([0-9,.]+)/i);
-    if (dtPriceMatch) {
-      const p = parseFloat((dtPriceMatch[1] || '').replace(/,/g, ''));
+    // 0. Client Hydrated Price Meta Tag (Injected deterministically by HeadlessWebView)
+    const clientPriceMatch = html.match(/name=["']client-hydrated-price["']\s+content=["']([0-9,.]+)["']/i)
+      || html.match(/content=["']([0-9,.]+)["']\s+name=["']client-hydrated-price["']/i);
+    if (clientPriceMatch) {
+      const p = parseFloat((clientPriceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) targetPrice = p;
+    }
+
+    // 1. Rendered HTML price selectors (data-test="current-price" / "product-price" / "module-product-detail-price-v2")
+    if (!targetPrice) {
+      const dtPriceMatch = html.match(/data-test=["']module-product-detail-price-v2["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+        || html.match(/data-module-type=["']ProductDetailPrice["'][\s\S]{0,1000}?\$([0-9,.]+)/i)
+        || html.match(/class=["'][^"']*(?:productDetailPrice|CurrentPrice|styles__StyledPrice|PriceSummary)[^"']*["'][^>]*>[\s\S]{0,500}?\$([0-9,.]+)/i)
+        || html.match(/data-test=["'](?:current-price|product-price|price-display)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
+        || html.match(/id=["']pdp-pricing-standard["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+        || html.match(/span[^\w>]*data-test=["']product-price["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+        || html.match(/span[^\w>]*aria-label=["']\$([0-9,.]+) current price["']/i)
+        || html.match(/class=["'][^"']*heading-medium[^"']*["'][^>]*>\$([0-9,.]+)/i);
+      if (dtPriceMatch) {
+        const p = parseFloat((dtPriceMatch[1] || '').replace(/,/g, ''));
+        if (!isNaN(p) && p > 0) targetPrice = p;
+      }
     }
 
     // 2. Embedded JSON / Next.js serialized values in HTML
@@ -582,8 +594,8 @@ function extractStoreDetails(cleanUrl, html) {
 
     // 3. Guard against false $35 price from Target free shipping threshold promo
     if (targetPrice === 35) {
-      const hasReal35PriceTag = html.match(/data-test=["'](?:current-price|product-price)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$35(?:\.00)?\b/i);
-      if (!hasReal35PriceTag) {
+      const hasReal35PriceTag = html.match(/data-test=["'](?:current-price|product-price|module-product-detail-price-v2)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$35(?:\.00)?\b/i);
+      if (!hasReal35PriceTag && !clientPriceMatch) {
         targetPrice = null;
       }
     }
