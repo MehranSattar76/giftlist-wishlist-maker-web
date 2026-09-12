@@ -437,14 +437,14 @@ function extractAmazonPrice(html) {
 
   // 2. Primary buybox price offscreen (aok-align-center, priceToPay, reinventPricePriceToPayMargin)
   const offscreenMatch = html.match(/class=["'][^"']*(?:priceToPay|reinventPricePriceToPayMargin|aok-align-center)[^"']*["'][^>]*>[\s\S]{0,300}?<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)/i)
-    || html.match(/<span class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]*?<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)/i);
+    || html.match(/<span class=["']a-price\s+aok-align-center[^"']*["'][^>]*>[\s\S]{0,500}?<span class=["']a-offscreen["']>\s*(?:US\s*)?(?:\$|USD\s*|PKR\s*|£|€|CAD\s*\$)?\s*([0-9,.]+)/i);
   if (offscreenMatch) {
     const val = parseFloat(offscreenMatch[1].replace(/,/g, ''));
     if (!isNaN(val) && val > 0) return val;
   }
 
   // 3. Whole + Fraction inside buybox or core price display (desktop & mobile)
-  const wholeFractionRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePriceDisplay_mobile_feature_div|corePrice_feature_div|corePrice_mobile_feature_div|apex_desktop|apex_mobile|price_inside_buybox|mobilePrice_feature_div)["'][\s\S]{0,1400}?class=["']a-price-whole["']>(\d+)<[\s\S]*?class=["']a-price-fraction["']>(\d+)</i;
+  const wholeFractionRegex = /id=["'](?:corePriceDisplay_desktop_feature_div|corePriceDisplay_mobile_feature_div|corePrice_feature_div|corePrice_mobile_feature_div|apex_desktop|apex_mobile|price_inside_buybox|mobilePrice_feature_div)["'][\s\S]{0,1400}?class=["']a-price-whole["']>(\d+)<[\s\S]{0,100}?class=["']a-price-fraction["']>(\d+)</i;
   const wfMatch = html.match(wholeFractionRegex);
   if (wfMatch) {
     const val = parseFloat(`${wfMatch[1]}.${wfMatch[2]}`);
@@ -455,14 +455,14 @@ function extractAmazonPrice(html) {
   // (NEVER do un-scoped global priceAmount search which matches $2,500 Amazon Visa card promo)
   const twisterMatch = html.match(/"desktop_buybox_group[^"]*":\s*\[\s*\{[^}]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i)
     || html.match(/"mobile_buybox_group[^"]*":\s*\[\s*\{[^}]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i)
-    || html.match(/twister-plus-buying-options-price-data["'][^>]*>[\s\S]*?"priceAmount":\s*(\d+(?:\.\d+)?)/i);
+    || html.match(/twister-plus-buying-options-price-data["'][^>]*>[\s\S]{0,1000}?"priceAmount":\s*(\d+(?:\.\d+)?)/i);
   if (twisterMatch) {
     const val = parseFloat(twisterMatch[1]);
     if (!isNaN(val) && val > 0) return val;
   }
 
   // 5. Books slot-price
-  const slotMatch = html.match(/class=["']slot-price["'][^>]*>[\s\S]*?class=["'][^"']*a-color-price[^"']*["']>\s*(?:US\s*)?(?:\$|USD\s*)?\s*([0-9,.]+)/i);
+  const slotMatch = html.match(/class=["']slot-price["'][^>]*>[\s\S]{0,500}?class=["'][^"']*a-color-price[^"']*["']>\s*(?:US\s*)?(?:\$|USD\s*)?\s*([0-9,.]+)/i);
   if (slotMatch) {
     const val = parseFloat(slotMatch[1].replace(/,/g, ''));
     if (!isNaN(val) && val > 0) return val;
@@ -636,10 +636,10 @@ function extractStoreDetails(cleanUrl, html) {
     let bbyPrice = null;
     const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
       || html.match(/"customerPrice"\s*:\s*(\d+(?:\.\d+)?)/i)
-      || html.match(/class=["'][^"']*priceView-hero-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*priceView-customer-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*large-amount[^"']*["'][^>]*>[\s\S]*?\$?([0-9,.]+)/i);
+      || html.match(/class=["'][^"']*priceView-hero-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*priceView-customer-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*large-amount[^"']*["'][^>]*>[\s\S]{0,1000}?\$?([0-9,.]+)/i);
     if (priceMatch) {
       const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) bbyPrice = p;
@@ -662,9 +662,9 @@ function extractStoreDetails(cleanUrl, html) {
     let etsyPrice = null;
     const priceMatch = html.match(/meta[^>]*property=["']product:price:amount["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
       || html.match(/class=["']currency-value["']>(\d+(?:\.\d+)?)<\/span>/i)
-      || html.match(/class=["'][^"']*wt-text-title-larger[^"']*["'][^>]*>[\s\S]*?\$(\d+(?:\.\d+)?)/i)
+      || html.match(/class=["'][^"']*wt-text-title-larger[^"']*["'][^>]*>[\s\S]{0,1000}?\$(\d+(?:\.\d+)?)/i)
       || html.match(/"price"\s*:\s*\{"amount"\s*:\s*(\d+(?:\.\d+)?)/i)
-      || html.match(/class=["'][^"']*wt-mr-xs-1[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+      || html.match(/class=["'][^"']*wt-mr-xs-1[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i);
     if (priceMatch) {
       const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) etsyPrice = p;
