@@ -25,8 +25,8 @@ let ebayTokenCache = {
 const CONTAINER_BOOT_TIME = Date.now();
 const CONTAINER_ID = `cnt_${Math.random().toString(36).substring(2, 8)}`;
 
-// Rolling in-memory log buffer (stores last 50 requests across warm serverless invocations)
-const MAX_LOGS = 50;
+// Rolling in-memory log buffer (compact lightweight buffer for operational diagnostics)
+const MAX_LOGS = 10;
 const requestLogs = [];
 
 function recordRequestLog(entry) {
@@ -1403,30 +1403,7 @@ module.exports = async function handler(req, res) {
       error: null
     };
     recordRequestLog(logObj);
-    console.log(`[DIAGNOSTIC_RUN] ${req.method} ${result.storeName || 'Store'} | Score: ${paramsScore} | Mobile: ${clientHtml ? 'YES' : 'NO'} | Title: ${hasValidTitle ? 'YES' : 'NO'} | Price: ${hasValidPrice ? '$' + result.price : 'NO'} | Image: ${hasValidImage ? 'YES' : 'NO'} (${durationMs}ms)`);
-
-    // Asynchronous shadow server comparison (non-blocking for ultra-fast mobile responses)
-    if (clientHtml && typeof clientHtml === 'string' && clientHtml.length > 50) {
-      resolveUniversalProduct(targetUrl, {}, null)
-        .then(shadowResult => {
-          if (shadowResult) {
-            const sTitle = Boolean(shadowResult.title && isValidTitle(shadowResult.title) && !shadowResult.title.startsWith('Item from') && shadowResult.title !== 'Shared Product');
-            const sPrice = Boolean(shadowResult.price !== null && shadowResult.price > 0);
-            const sImage = Boolean(shadowResult.imageUrl && shadowResult.imageUrl.length > 10);
-            const sScore = (sTitle ? 1 : 0) + (sPrice ? 1 : 0) + (sImage ? 1 : 0);
-            logObj.serverComparison = {
-              title: shadowResult.title || null,
-              price: shadowResult.price || null,
-              imageUrl: shadowResult.imageUrl || null,
-              score: `${sScore}/3`,
-              params: { title: sTitle, price: sPrice, image: sImage }
-            };
-          }
-        })
-        .catch(shadowErr => {
-          logObj.serverComparison = { error: shadowErr.message, score: '0/3' };
-        });
-    }
+    console.log(`[REQ] ${req.method} ${result.storeName || 'Store'} | Score: ${paramsScore} | Mobile: ${clientHtml ? 'YES' : 'NO'} | Title: ${hasValidTitle ? 'YES' : 'NO'} | Price: ${hasValidPrice ? '$' + result.price : 'NO'} | Image: ${hasValidImage ? 'YES' : 'NO'} (${durationMs}ms)`);
 
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
