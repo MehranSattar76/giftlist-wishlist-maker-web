@@ -517,10 +517,11 @@ function extractStoreDetails(cleanUrl, html) {
     let targetPrice = null;
 
     // 1. Rendered HTML price selectors (data-test="current-price" / "product-price")
-    const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice)[^"']*["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i);
+    const dtPriceMatch = html.match(/data-test=["'](?:current-price|product-price|price-display)["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*(?:CurrentPrice|styles__StyledPrice|PriceSummary)[^"']*["'][^>]*>(?:<[^>]{1,50}>|\s)*\$([0-9,.]+)/i)
+      || html.match(/id=["']pdp-pricing-standard["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
     if (dtPriceMatch) {
-      const p = parseFloat(dtPriceMatch[1].replace(/,/g, ''));
+      const p = parseFloat((dtPriceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) targetPrice = p;
     }
 
@@ -554,9 +555,11 @@ function extractStoreDetails(cleanUrl, html) {
   // 4. BEST BUY
   if (h.includes('bestbuy.')) {
     const skuMatch = cleanUrl.match(/bestbuy\.[a-z.]+\/site\/[^/?#]+\/(\d{7,8})\.p/i)
-      || cleanUrl.match(/[?&]skuId=(\d{7,8})/i);
+      || cleanUrl.match(/[?&]skuId=(\d{7,10})/i)
+      || cleanUrl.match(/\/sku\/(\d{7,10})/i);
     const sku = skuMatch ? skuMatch[1] : null;
-    const slugMatch = cleanUrl.match(/bestbuy\.[a-z.]+\/site\/([^/?#]+)\/\d+\.p/i);
+    const slugMatch = cleanUrl.match(/bestbuy\.[a-z.]+\/site\/([^/?#]+)\/\d+\.p/i)
+      || cleanUrl.match(/bestbuy\.[a-z.]+\/product\/([^/?#]+)\//i);
     const slugTitle = slugMatch ? cleanSlug(slugMatch[1]) : null;
 
     const cdnImage = sku
@@ -565,8 +568,13 @@ function extractStoreDetails(cleanUrl, html) {
 
     let bbyPrice = null;
     const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
-      || html.match(/"customerPrice"\s*:\s*(\d+(?:\.\d+)?)/i);
-    if (priceMatch) bbyPrice = parseFloat(priceMatch[1]);
+      || html.match(/"customerPrice"\s*:\s*(\d+(?:\.\d+)?)/i)
+      || html.match(/class=["'][^"']*priceView-customer-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i)
+      || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]*?\$([0-9,.]+)/i);
+    if (priceMatch) {
+      const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
+      if (!isNaN(p) && p > 0) bbyPrice = p;
+    }
 
     return { storeName: 'Best Buy', sku, slugTitle, cdnImage, storePrice: bbyPrice };
   }
@@ -1221,40 +1229,13 @@ module.exports = async function handler(req, res) {
       debugInfo.paidApisStatus = 'DISABLED_FOR_DIAGNOSTIC_EVALUATION';
     }
 
-    // 6. Diagnostic: Shadow Direct Server Fetch for Mobile Edge vs Server Comparison
-    let serverComparison = null;
-    if (clientHtml && typeof clientHtml === 'string' && clientHtml.length > 50) {
-      try {
-        const shadowDebug = {};
-        const shadowResult = await Promise.race([
-          resolveUniversalProduct(targetUrl, shadowDebug, null),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
-        ]);
-        if (shadowResult) {
-          const sTitle = Boolean(shadowResult.title && isValidTitle(shadowResult.title) && !shadowResult.title.startsWith('Item from') && shadowResult.title !== 'Shared Product');
-          const sPrice = Boolean(shadowResult.price !== null && shadowResult.price > 0);
-          const sImage = Boolean(shadowResult.imageUrl && shadowResult.imageUrl.length > 10);
-          const sScore = (sTitle ? 1 : 0) + (sPrice ? 1 : 0) + (sImage ? 1 : 0);
-          serverComparison = {
-            title: shadowResult.title || null,
-            price: shadowResult.price || null,
-            imageUrl: shadowResult.imageUrl || null,
-            score: `${sScore}/3`,
-            params: { title: sTitle, price: sPrice, image: sImage }
-          };
-        }
-      } catch (shadowErr) {
-        serverComparison = { error: shadowErr.message, score: '0/3' };
-      }
-    }
-
     const hasValidTitle = Boolean(result.title && isValidTitle(result.title) && !result.title.startsWith('Item from') && result.title !== 'Shared Product');
     const hasValidPrice = Boolean(result.price !== null && result.price !== undefined && result.price > 0);
     const hasValidImage = Boolean(result.imageUrl && result.imageUrl.length > 10);
     const paramsScore = `${(hasValidTitle ? 1 : 0) + (hasValidPrice ? 1 : 0) + (hasValidImage ? 1 : 0)}/3`;
 
     const durationMs = Date.now() - startTime;
-    recordRequestLog({
+    const logObj = {
       method: req.method,
       url: targetUrl,
       store: result.storeName,
@@ -1273,12 +1254,36 @@ module.exports = async function handler(req, res) {
       hasImage: Boolean(result.imageUrl),
       imageUrl: result.imageUrl,
       paramsScore,
-      serverComparison,
+      serverComparison: null,
       durationMs,
       success: true,
       error: null
-    });
+    };
+    recordRequestLog(logObj);
     console.log(`[DIAGNOSTIC_RUN] ${req.method} ${result.storeName || 'Store'} | Score: ${paramsScore} | Mobile: ${clientHtml ? 'YES' : 'NO'} | Title: ${hasValidTitle ? 'YES' : 'NO'} | Price: ${hasValidPrice ? '$' + result.price : 'NO'} | Image: ${hasValidImage ? 'YES' : 'NO'} (${durationMs}ms)`);
+
+    // Asynchronous shadow server comparison (non-blocking for ultra-fast mobile responses)
+    if (clientHtml && typeof clientHtml === 'string' && clientHtml.length > 50) {
+      resolveUniversalProduct(targetUrl, {}, null)
+        .then(shadowResult => {
+          if (shadowResult) {
+            const sTitle = Boolean(shadowResult.title && isValidTitle(shadowResult.title) && !shadowResult.title.startsWith('Item from') && shadowResult.title !== 'Shared Product');
+            const sPrice = Boolean(shadowResult.price !== null && shadowResult.price > 0);
+            const sImage = Boolean(shadowResult.imageUrl && shadowResult.imageUrl.length > 10);
+            const sScore = (sTitle ? 1 : 0) + (sPrice ? 1 : 0) + (sImage ? 1 : 0);
+            logObj.serverComparison = {
+              title: shadowResult.title || null,
+              price: shadowResult.price || null,
+              imageUrl: shadowResult.imageUrl || null,
+              score: `${sScore}/3`,
+              params: { title: sTitle, price: sPrice, image: sImage }
+            };
+          }
+        })
+        .catch(shadowErr => {
+          logObj.serverComparison = { error: shadowErr.message, score: '0/3' };
+        });
+    }
 
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
