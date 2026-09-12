@@ -604,7 +604,19 @@ function extractStoreDetails(cleanUrl, html) {
     const scene7Match = html.match(/https:\/\/target\.scene7\.com\/is\/image\/Target\/[a-zA-Z0-9_-]+/i);
     if (scene7Match) targetImage = scene7Match[0];
 
-    return { storeName: 'Target', tcin, slugTitle, storePrice: targetPrice, storeImage: targetImage };
+    let targetTitle = null;
+    const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    if (h1Match && h1Match[1]) {
+      targetTitle = h1Match[1].replace(/<[^>]+>/g, '').trim();
+    }
+    if (!targetTitle) {
+      const tm = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (tm && tm[1]) {
+        targetTitle = tm[1].replace(/\s*:\s*Target\s*$/i, '').trim();
+      }
+    }
+
+    return { storeName: 'Target', tcin, slugTitle, storeTitle: targetTitle, storePrice: targetPrice, storeImage: targetImage };
   }
 
   // 4. BEST BUY
