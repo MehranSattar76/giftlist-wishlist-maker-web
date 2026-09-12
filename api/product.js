@@ -634,15 +634,28 @@ function extractStoreDetails(cleanUrl, html) {
       : null;
 
     let bbyPrice = null;
-    const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
-      || html.match(/"customerPrice"\s*:\s*(\d+(?:\.\d+)?)/i)
-      || html.match(/class=["'][^"']*priceView-hero-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*priceView-customer-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
-      || html.match(/class=["'][^"']*large-amount[^"']*["'][^>]*>[\s\S]{0,1000}?\$?([0-9,.]+)/i);
-    if (priceMatch) {
-      const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
+
+    // 0. Client Hydrated Price Meta Tag (Injected deterministically by HeadlessWebView)
+    const clientPriceMatch = html.match(/name=["']client-hydrated-price["']\s+content=["']([0-9,.]+)["']/i)
+      || html.match(/content=["']([0-9,.]+)["']\s+name=["']client-hydrated-price["']/i);
+    if (clientPriceMatch) {
+      const p = parseFloat((clientPriceMatch[1] || '').replace(/,/g, ''));
       if (!isNaN(p) && p > 0) bbyPrice = p;
+    }
+
+    if (!bbyPrice) {
+      const priceMatch = html.match(/itemprop=["']price["'][^>]*content=["'](\d+(?:\.\d+)?)["']/i)
+        || html.match(/"(?:customerPrice|displayableCustomerPrice)"\s*:\s*(\d+(?:\.\d+)?)/i)
+        || html.match(/data-testid=["'][^"']*customer[-_]price[^"']*["'][^>]*>[\s\S]{0,500}?\$([0-9,.]+)/i)
+        || html.match(/elementtiming=["']price_et["'][^>]*>\$([0-9,.]+)/i)
+        || html.match(/class=["'][^"']*priceView-hero-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+        || html.match(/class=["'][^"']*priceView-customer-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+        || html.match(/class=["'][^"']*pricing-price__current-price[^"']*["'][^>]*>[\s\S]{0,1000}?\$([0-9,.]+)/i)
+        || html.match(/class=["'][^"']*large-amount[^"']*["'][^>]*>[\s\S]{0,1000}?\$?([0-9,.]+)/i);
+      if (priceMatch) {
+        const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
+        if (!isNaN(p) && p > 0) bbyPrice = p;
+      }
     }
 
     return { storeName: 'Best Buy', sku, slugTitle, cdnImage, storePrice: bbyPrice };
@@ -793,7 +806,13 @@ async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null)
     || null;
 
   // 6. Resolve Price & Range
-  let finalPrice = storeData.storePrice || jsonLd?.price || (ogPrice ? parseFloat(ogPrice) : null);
+  const universalClientPriceMatch = html.match(/name=["']client-hydrated-price["']\s+content=["']([0-9,.]+)["']/i)
+    || html.match(/content=["']([0-9,.]+)["']\s+name=["']client-hydrated-price["']/i);
+  const universalClientPrice = universalClientPriceMatch ? parseFloat((universalClientPriceMatch[1] || '').replace(/,/g, '')) : null;
+
+  let finalPrice = (universalClientPrice && !isNaN(universalClientPrice) && universalClientPrice > 0)
+    ? universalClientPrice
+    : (storeData.storePrice || jsonLd?.price || (ogPrice ? parseFloat(ogPrice) : null));
   let minPrice = jsonLd?.minPrice || finalPrice;
   let maxPrice = jsonLd?.maxPrice || null;
   let priceRangeText = null;
