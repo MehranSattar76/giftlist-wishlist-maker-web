@@ -8,6 +8,13 @@ const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET || '';
 const CRAWLBASE_TOKEN = process.env.CRAWLBASE_TOKEN || '';
 const SCRAPFLY_KEY = process.env.SCRAPFLY_KEY || 'scp-live-ae6420642ef04af5b55129940ff4e1ea';
 
+// ============================================================================
+// DIAGNOSTIC TEST FLAG: Disable Paid APIs (Crawlbase & Scrapfly)
+// Set to true for purely diagnostic testing of native & client-assisted extraction.
+// Set to false for standard production operation with paid fallbacks enabled.
+// ============================================================================
+const DISABLE_PAID_FALLBACKS = true;
+
 // In-memory token cache across serverless warm invocations
 let ebayTokenCache = {
   token: null,
@@ -51,16 +58,39 @@ function renderLogsHtml(logs) {
       ? `<strong>$${Number(l.price).toFixed(2)}</strong>`
       : '<span style="color:#888;">—</span>';
 
-    const cbInfo = l.crawlbaseTriggered
-      ? `<span style="color:#055160;background:#cff4fc;padding:2px 6px;border-radius:3px;font-size:11px;">${l.crawlbaseMode || 'yes'} (${l.crawlbaseStatus || '—'})</span>`
-      : '<span style="color:#888;font-size:11px;">Skipped</span>';
+    const isMobile = Boolean(l.clientHtmlLength && l.clientHtmlLength > 50);
+    const sourceBadge = isMobile
+      ? `<span style="color:#0f5132;background:#d1e7dd;padding:2px 8px;border-radius:4px;font-weight:600;font-size:11px;">📱 Mobile Edge (${Math.round(l.clientHtmlLength / 1024)} KB)</span>`
+      : `<span style="color:#084298;background:#cfe2ff;padding:2px 8px;border-radius:4px;font-weight:600;font-size:11px;">🖥️ Server Direct</span>`;
 
-    const cleanTitle = (l.title || 'Untitled').length > 40
-      ? (l.title || 'Untitled').slice(0, 40) + '…'
+    const scoreColor = (l.paramsScore === '3/3') ? '#0f5132;background:#d1e7dd;' : (l.paramsScore === '2/3') ? '#664d03;background:#fff3cd;' : '#842029;background:#f8d7da;';
+    const scoreBadge = l.paramsScore
+      ? `<span style="color:${scoreColor}padding:2px 8px;border-radius:4px;font-weight:700;font-size:12px;">${l.paramsScore}</span>`
+      : '—';
+
+    let compHtml = '<span style="color:#888;font-size:11px;">—</span>';
+    if (l.serverComparison) {
+      if (l.serverComparison.error) {
+        compHtml = `<span style="color:#842029;font-size:11px;">Server failed: ${l.serverComparison.error}</span>`;
+      } else {
+        const sScore = l.serverComparison.score || '?';
+        const mNum = parseInt(l.paramsScore) || 0;
+        const sNum = parseInt(sScore) || 0;
+        const delta = mNum - sNum;
+        const deltaText = delta > 0
+          ? `<span style="color:#0f5132;font-weight:700;">(+${delta} on mobile)</span>`
+          : (delta === 0 ? '<span style="color:#6c757d;">(parity)</span>' : `<span style="color:#842029;">(${delta})</span>`);
+        const sPriceText = l.serverComparison.price ? `$${Number(l.serverComparison.price).toFixed(2)}` : 'No price';
+        compHtml = `<div style="font-size:11px;">Server: <strong>${sScore}</strong> [${sPriceText}] ${deltaText}</div>`;
+      }
+    }
+
+    const cleanTitle = (l.title || 'Untitled').length > 38
+      ? (l.title || 'Untitled').slice(0, 38) + '…'
       : (l.title || 'Untitled');
 
-    const shortUrl = (l.url || '').length > 45
-      ? (l.url || '').slice(0, 45) + '…'
+    const shortUrl = (l.url || '').length > 40
+      ? (l.url || '').slice(0, 40) + '…'
       : (l.url || '');
 
     return `<tr>
@@ -68,11 +98,12 @@ function renderLogsHtml(logs) {
       <td><strong>${l.method}</strong></td>
       <td><span style="background:#f0f2f5;padding:2px 6px;border-radius:3px;font-weight:500;">${l.store || 'Store'}</span></td>
       <td><a href="${l.url}" target="_blank" title="${l.url}" style="color:#0d6efd;text-decoration:none;">${shortUrl}</a></td>
+      <td>${sourceBadge}</td>
+      <td style="text-align:center;">${scoreBadge}</td>
       <td title="${l.title || ''}">${cleanTitle}</td>
       <td>${priceDisplay}</td>
       <td style="text-align:center;">${imgPreview}</td>
-      <td><span style="font-size:11px;color:#555;">${l.source || '—'}</span></td>
-      <td>${cbInfo}</td>
+      <td>${compHtml}</td>
       <td style="font-size:12px;text-align:right;">${l.durationMs || 0}ms</td>
       <td>${statusBadge}</td>
     </tr>`;
@@ -82,19 +113,20 @@ function renderLogsHtml(logs) {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Vercel Request Logs - Wishlist & Giftlist Metadata Engine</title>
+  <title>Diagnostic Request Logs - Wishlist & Giftlist Metadata Engine</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8f9fa; color: #212529; margin: 0; padding: 20px; }
-    .container { max-width: 1300px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; }
+    .container { max-width: 1400px; margin: 0 auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 24px; }
     h1 { font-size: 22px; margin-top: 0; display: flex; align-items: center; justify-content: space-between; }
-    .meta { color: #6c757d; font-size: 13px; margin-bottom: 20px; }
+    .meta { color: #6c757d; font-size: 13px; margin-bottom: 16px; }
+    .diag-banner { background: #fff3cd; border: 1px solid #ffe69c; color: #664d03; padding: 12px 16px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; line-height: 1.5; }
     .actions { display: flex; gap: 10px; }
     .btn { background: #0d6efd; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; }
     .btn-secondary { background: #6c757d; }
     .btn-danger { background: #dc3545; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-    th { text-align: left; padding: 10px; background: #f1f3f5; border-bottom: 2px solid #dee2e6; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    th { text-align: left; padding: 10px; background: #f1f3f5; border-bottom: 2px solid #dee2e6; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
     td { padding: 10px; border-bottom: 1px solid #e9ecef; vertical-align: middle; }
     tr:hover { background-color: #f8f9fa; }
     .empty { padding: 40px; text-align: center; color: #888; font-size: 15px; }
@@ -103,17 +135,21 @@ function renderLogsHtml(logs) {
 <body>
   <div class="container">
     <h1>
-      <span>Vercel In-Memory Request Logs (${logs.length} / ${MAX_LOGS})</span>
+      <span>🧪 Diagnostic Request Logs (${logs.length} / ${MAX_LOGS})</span>
       <div class="actions">
         <a href="?logs=1&format=html" class="btn">Refresh</a>
         <a href="?logs=1" class="btn btn-secondary" target="_blank">View JSON</a>
         <a href="?clearLogs=1" class="btn btn-danger" onclick="return confirm('Clear logs?')">Clear Logs</a>
       </div>
     </h1>
-    <div class="meta">
-      Captures real-time metadata resolution requests across warm serverless invocations. Shows client Edge fetches, server fetches, Crawlbase triggers, and final parsed fields.
+    <div class="diag-banner">
+      <strong>⚠️ DIAGNOSTIC TEST MODE ACTIVE:</strong> Paid fallback APIs (Crawlbase &amp; Scrapfly) are <strong>DISABLED</strong> on this serverless instance.
+      <br>Evaluating how <strong>Mobile Edge DOM Fetching (Residential IP)</strong> performs compared to <strong>Server Direct Fetching (Vercel Datacenter IP)</strong> across all 5 stores (Amazon, Walmart, Best Buy, Target, Etsy).
     </div>
-    ${logs.length === 0 ? '<div class="empty">No requests recorded yet. Make a request via the mobile app or API to see live traces.</div>' : `
+    <div class="meta">
+      Captures real-time metadata resolution requests. Parameters Score indicates how many of the 3 key parameters (Title, Price, Image) were extracted successfully.
+    </div>
+    ${logs.length === 0 ? '<div class="empty">No requests recorded yet. Add products via the mobile app or manual URL paste to generate traces.</div>' : `
     <div style="overflow-x:auto;">
       <table>
         <thead>
@@ -122,11 +158,12 @@ function renderLogsHtml(logs) {
             <th>Method</th>
             <th>Store</th>
             <th>Target URL</th>
+            <th>Source</th>
+            <th>Score</th>
             <th>Resolved Title</th>
             <th>Price</th>
             <th>Image</th>
-            <th>Source</th>
-            <th>Crawlbase</th>
+            <th>Server Comparison</th>
             <th>Latency</th>
             <th>Status</th>
           </tr>
@@ -1010,13 +1047,14 @@ module.exports = async function handler(req, res) {
 
     // 3. Phase 2: Smart Targeted Crawlbase Fallback Engine
     // Triggers ONLY when:
+    // - Paid fallbacks are enabled (DISABLE_PAID_FALLBACKS === false)
     // - Explicitly requested via crawlbase=1 or body.crawlbase=true, OR
     // - Native resolution could not obtain a valid price AND CRAWLBASE_TOKEN is configured
     const isEtsyUrl = targetUrl.toLowerCase().includes('etsy.com');
     const forceCrawlbase = (req.query.crawlbase === '1' || body?.crawlbase === true);
     const priceMissing = (result.price === null || result.price === undefined || result.price <= 0);
     const suspiciousAmazonPrice = (result.storeName === 'Amazon' && result.price !== null && result.price > 500);
-    const shouldTryCrawlbase = Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing || suspiciousAmazonPrice) && !isEtsyUrl);
+    const shouldTryCrawlbase = !DISABLE_PAID_FALLBACKS && Boolean(CRAWLBASE_TOKEN && (forceCrawlbase || priceMissing || suspiciousAmazonPrice) && !isEtsyUrl);
 
     if (shouldTryCrawlbase) {
       debugInfo.crawlbaseTriggered = true;
@@ -1061,7 +1099,7 @@ module.exports = async function handler(req, res) {
     const targetTcinMatch = targetUrl.match(/\/A-(\d{7,10})/i) || targetUrl.match(/\/p\/[^\/]+\/(\d{7,10})/i);
     const targetTcin = targetTcinMatch ? (targetTcinMatch[1] || targetTcinMatch[2]) : null;
 
-    if (isTargetStillMissingPrice && targetTcin && CRAWLBASE_TOKEN) {
+    if (!DISABLE_PAID_FALLBACKS && isTargetStillMissingPrice && targetTcin && CRAWLBASE_TOKEN) {
       debugInfo.targetRedskyTriggered = true;
       try {
         const redskyUrls = [
@@ -1128,9 +1166,9 @@ module.exports = async function handler(req, res) {
     }
 
     // 5. Phase 3: Etsy Dedicated Scrapfly ASP Fallback
-    // Triggers ONLY for Etsy when price or image is missing or title is generic
+    // Triggers ONLY for Etsy when price or image is missing or title is generic AND paid fallbacks enabled
     const isEtsyMissingData = isEtsyUrl && (result.price === null || !result.imageUrl || !isValidTitle(result.title) || result.title.startsWith('Item from'));
-    if (isEtsyMissingData && SCRAPFLY_KEY) {
+    if (!DISABLE_PAID_FALLBACKS && isEtsyMissingData && SCRAPFLY_KEY) {
       debugInfo.scrapflyTriggered = true;
       try {
         const scrapflyParams = new URLSearchParams({
@@ -1179,6 +1217,42 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    if (DISABLE_PAID_FALLBACKS) {
+      debugInfo.paidApisStatus = 'DISABLED_FOR_DIAGNOSTIC_EVALUATION';
+    }
+
+    // 6. Diagnostic: Shadow Direct Server Fetch for Mobile Edge vs Server Comparison
+    let serverComparison = null;
+    if (clientHtml && typeof clientHtml === 'string' && clientHtml.length > 50) {
+      try {
+        const shadowDebug = {};
+        const shadowResult = await Promise.race([
+          resolveUniversalProduct(targetUrl, shadowDebug, null),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
+        ]);
+        if (shadowResult) {
+          const sTitle = Boolean(shadowResult.title && isValidTitle(shadowResult.title) && !shadowResult.title.startsWith('Item from') && shadowResult.title !== 'Shared Product');
+          const sPrice = Boolean(shadowResult.price !== null && shadowResult.price > 0);
+          const sImage = Boolean(shadowResult.imageUrl && shadowResult.imageUrl.length > 10);
+          const sScore = (sTitle ? 1 : 0) + (sPrice ? 1 : 0) + (sImage ? 1 : 0);
+          serverComparison = {
+            title: shadowResult.title || null,
+            price: shadowResult.price || null,
+            imageUrl: shadowResult.imageUrl || null,
+            score: `${sScore}/3`,
+            params: { title: sTitle, price: sPrice, image: sImage }
+          };
+        }
+      } catch (shadowErr) {
+        serverComparison = { error: shadowErr.message, score: '0/3' };
+      }
+    }
+
+    const hasValidTitle = Boolean(result.title && isValidTitle(result.title) && !result.title.startsWith('Item from') && result.title !== 'Shared Product');
+    const hasValidPrice = Boolean(result.price !== null && result.price !== undefined && result.price > 0);
+    const hasValidImage = Boolean(result.imageUrl && result.imageUrl.length > 10);
+    const paramsScore = `${(hasValidTitle ? 1 : 0) + (hasValidPrice ? 1 : 0) + (hasValidImage ? 1 : 0)}/3`;
+
     const durationMs = Date.now() - startTime;
     recordRequestLog({
       method: req.method,
@@ -1186,7 +1260,8 @@ module.exports = async function handler(req, res) {
       store: result.storeName,
       clientIp,
       clientHtmlLength: clientHtml ? clientHtml.length : 0,
-      source: result.source || debugInfo.source || 'native',
+      source: result.source || debugInfo.source || (clientHtml ? 'client-assisted-edge-fetch' : 'server-direct'),
+      paidApisStatus: DISABLE_PAID_FALLBACKS ? 'DISABLED' : 'ENABLED',
       crawlbaseTriggered: Boolean(debugInfo.crawlbaseTriggered),
       crawlbaseMode: debugInfo.crawlbaseMode || null,
       crawlbaseStatus: debugInfo.crawlbaseStatus || null,
@@ -1197,11 +1272,13 @@ module.exports = async function handler(req, res) {
       price: result.price,
       hasImage: Boolean(result.imageUrl),
       imageUrl: result.imageUrl,
+      paramsScore,
+      serverComparison,
       durationMs,
       success: true,
       error: null
     });
-    console.log(`[REQ] ${req.method} ${result.storeName || 'Store'} - ${result.title?.slice(0, 30)} - $${result.price} (${durationMs}ms)`);
+    console.log(`[DIAGNOSTIC_RUN] ${req.method} ${result.storeName || 'Store'} | Score: ${paramsScore} | Mobile: ${clientHtml ? 'YES' : 'NO'} | Title: ${hasValidTitle ? 'YES' : 'NO'} | Price: ${hasValidPrice ? '$' + result.price : 'NO'} | Image: ${hasValidImage ? 'YES' : 'NO'} (${durationMs}ms)`);
 
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
@@ -1214,6 +1291,7 @@ module.exports = async function handler(req, res) {
       clientIp,
       clientHtmlLength: clientHtml ? clientHtml.length : 0,
       source: 'error',
+      paidApisStatus: DISABLE_PAID_FALLBACKS ? 'DISABLED' : 'ENABLED',
       crawlbaseTriggered: Boolean(debugInfo.crawlbaseTriggered),
       crawlbaseMode: debugInfo.crawlbaseMode || null,
       crawlbaseStatus: debugInfo.crawlbaseStatus || null,
@@ -1221,6 +1299,8 @@ module.exports = async function handler(req, res) {
       price: null,
       hasImage: false,
       imageUrl: null,
+      paramsScore: '0/3',
+      serverComparison: null,
       durationMs,
       success: false,
       error: error.message || 'Failed to extract metadata'
