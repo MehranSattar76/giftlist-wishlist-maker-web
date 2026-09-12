@@ -640,7 +640,40 @@ function extractStoreDetails(cleanUrl, html) {
       || html.match(/content=["']([0-9,.]+)["']\s+name=["']client-hydrated-price["']/i);
     if (clientPriceMatch) {
       const p = parseFloat((clientPriceMatch[1] || '').replace(/,/g, ''));
-      if (!isNaN(p) && p > 0) bbyPrice = p;
+      if (!isNaN(p) && p > 0) {
+        // Discard false $2 from Citibank financing disclaimer ("Min. interest charge up to $2")
+        if (p === 2) {
+          const hasReal2DollarPrice = html.match(/data-testid=["'][^"']*customer[-_]price[^"']*["'][^>]*>\s*\$2(?:\.00)?\s*</i);
+          if (hasReal2DollarPrice) bbyPrice = p;
+        } else {
+          bbyPrice = p;
+        }
+      }
+    }
+
+    // 1. Best Buy Analytics Metadata Tag (direct SSR embedded product data)
+    if (!bbyPrice) {
+      const metaMatch = html.match(/<meta[^>]*name=["']analytics-metadata["'][^>]*content=["']([^"']+)["']/i);
+      if (metaMatch) {
+        const rawContent = metaMatch[1].replace(/&quot;/g, '"');
+        const m = rawContent.match(/"price"\s*:\s*"([0-9,.]+)"/);
+        if (m) {
+          const p = parseFloat((m[1] || '').replace(/,/g, ''));
+          if (!isNaN(p) && p > 0 && p !== 2) {
+            bbyPrice = p;
+          }
+        }
+      }
+    }
+
+    // 2. Primary Hero Buybox Target
+    if (!bbyPrice) {
+      const luPriceMatch = html.match(/data-lu-target=["']customer_price["'][^>]*>[\s\S]{0,500}?\$([0-9,.]+)/i)
+        || html.match(/data-testid=["']LARGE_profile["'][\s\S]{0,800}?data-testid=["']price-block-customer-price["'][^>]*>[\s\S]{0,500}?\$([0-9,.]+)/i);
+      if (luPriceMatch) {
+        const p = parseFloat((luPriceMatch[1] || '').replace(/,/g, ''));
+        if (!isNaN(p) && p > 0 && p !== 2) bbyPrice = p;
+      }
     }
 
     if (!bbyPrice) {
@@ -654,7 +687,7 @@ function extractStoreDetails(cleanUrl, html) {
         || html.match(/class=["'][^"']*large-amount[^"']*["'][^>]*>[\s\S]{0,1000}?\$?([0-9,.]+)/i);
       if (priceMatch) {
         const p = parseFloat((priceMatch[1] || '').replace(/,/g, ''));
-        if (!isNaN(p) && p > 0) bbyPrice = p;
+        if (!isNaN(p) && p > 0 && p !== 2) bbyPrice = p;
       }
     }
 
@@ -808,7 +841,15 @@ async function resolveUniversalProduct(url, debugInfo = {}, providedHtml = null)
   // 6. Resolve Price & Range
   const universalClientPriceMatch = html.match(/name=["']client-hydrated-price["']\s+content=["']([0-9,.]+)["']/i)
     || html.match(/content=["']([0-9,.]+)["']\s+name=["']client-hydrated-price["']/i);
-  const universalClientPrice = universalClientPriceMatch ? parseFloat((universalClientPriceMatch[1] || '').replace(/,/g, '')) : null;
+  let universalClientPrice = universalClientPriceMatch ? parseFloat((universalClientPriceMatch[1] || '').replace(/,/g, '')) : null;
+
+  // Best Buy protection: never allow false $2 financing disclaimer charge to pass as universalClientPrice
+  if (universalClientPrice === 2 && (baseStoreName === 'Best Buy' || host.includes('bestbuy.'))) {
+    const hasReal2DollarPrice = html.match(/data-testid=["'][^"']*customer[-_]price[^"']*["'][^>]*>\s*\$2(?:\.00)?\s*</i);
+    if (!hasReal2DollarPrice) {
+      universalClientPrice = null;
+    }
+  }
 
   let finalPrice = (universalClientPrice && !isNaN(universalClientPrice) && universalClientPrice > 0)
     ? universalClientPrice
