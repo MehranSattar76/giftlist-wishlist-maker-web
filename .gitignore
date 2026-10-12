@@ -11,3 +11,4 @@ desktop.ini
 .vscode/
 *.swp
 *.backup.*
+.playwright-mcp/
