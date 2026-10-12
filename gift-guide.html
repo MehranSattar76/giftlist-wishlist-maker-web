@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gift Guide & Ideas - GiftList & WishList Maker</title>
+  <meta name="description" content="Explore practical gift ideas, budget-planning advice, and simple tips for organizing thoughtful gifts." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container nav-wrap">
+      <a href="/" class="brand">
+        <div class="brand-icon">🎁</div>
+        <span>GiftList & WishList Maker</span>
+      </a>
+      <button class="menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">☰</button>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html#gift-inspiration">Gift ideas</a></li>
+        <li><a href="index.html#how-it-works">How it works</a></li>
+        <li><a href="gift-guide.html" class="active">Gift Guide</a></li>
+        <li><a href="index.html#features">About the app</a></li>
+        <li><a href="contact.html" class="btn btn-secondary">Support</a></li>
+      </ul>
+    </div>
+  </header>
+
+  <div class="legal-page-header">
+    <div class="container">
+      <h1>The Gift Guide</h1>
+      <div class="legal-meta">Thoughtful ideas and practical advice for every occasion and budget.</div>
+    </div>
+  </div>
+
+  <main>
+    <section class="section">
+      <div class="container">
+        <div class="guide-tools" aria-label="Find a gift guide">
+          <label class="guide-search">
+            <span class="sr-only">Search gift guides</span>
+            <span class="guide-search-icon" aria-hidden="true">⌕</span>
+            <input id="guide-search" type="search" placeholder="Search ideas, occasions, or budgets" autocomplete="off" />
+          </label>
+          <div class="guide-filters" role="group" aria-label="Filter gift guides">
+            <button class="guide-filter active" type="button" data-guide-filter="all" aria-pressed="true">All guides</button>
+            <button class="guide-filter" type="button" data-guide-filter="thoughtful" aria-pressed="false">Thoughtful gifts</button>
+            <button class="guide-filter" type="button" data-guide-filter="budget" aria-pressed="false">Budget tips</button>
+            <button class="guide-filter" type="button" data-guide-filter="planning" aria-pressed="false">Planning</button>
+          </div>
+          <p class="guide-result-count" id="guide-result-count" aria-live="polite"></p>
+        </div>
+        <div class="guide-grid">
+          <article class="guide-card" id="thoughtful-gifts" data-guide-category="thoughtful">
+            <div class="guide-card-art guide-card-art-lilac" aria-hidden="true"><span>💌</span><i>✳</i></div>
+            <div class="guide-body">
+              <span class="guide-store-badge">Thoughtful gifts</span>
+              <p class="article-meta">A 3-minute read · For birthdays and holidays</p>
+              <h2 class="guide-title">How to find a thoughtful gift for someone who has everything</h2>
+              <p class="guide-desc">Skip the pressure to find something extravagant. The best place to start is with a detail about their everyday life: a hobby they make time for, a routine they enjoy, or a small annoyance you could help solve.</p>
+              <h3 class="article-subtitle">Try this simple idea list</h3>
+              <ul class="article-list">
+                <li><strong>For the homebody:</strong> a cozy throw, a puzzle, or a treat for their favorite evening ritual.</li>
+                <li><strong>For the curious cook:</strong> an interesting spice, a useful kitchen tool, or a recipe book around a cuisine they love.</li>
+                <li><strong>For the person who values time:</strong> plan a shared meal, outing, or afternoon together.</li>
+              </ul>
+              <p class="guide-desc">Before buying, ask yourself: “Would this feel like them?” If you are unsure, choose something consumable or an experience instead of adding clutter.</p>
+              <button class="save-guide-button" type="button" data-save-guide="thoughtful-gifts" aria-pressed="false">♡ <span>Save this guide</span></button>
+            </div>
+          </article>
+
+          <article class="guide-card" id="gift-budget" data-guide-category="budget">
+            <div class="guide-card-art guide-card-art-peach" aria-hidden="true"><span>🪙</span><i>✳</i></div>
+            <div class="guide-body">
+              <span class="guide-store-badge">Budget tips</span>
+              <p class="article-meta">A 2-minute read · Make your budget go further</p>
+              <h2 class="guide-title">A no-stress way to plan a gift budget</h2>
+              <p class="guide-desc">Set a total you can comfortably spend, then write down everyone you are shopping for. Give each person a rough limit and leave a little room for wrapping, delivery, or a last-minute change.</p>
+              <h3 class="article-subtitle">Example: planning for three people</h3>
+              <ul class="article-list">
+                <li>Start with the amount you can afford overall.</li>
+                <li>Choose a comfortable share for each person based on your relationship and plans.</li>
+                <li>Keep a small buffer instead of assigning every dollar in advance.</li>
+              </ul>
+              <p class="guide-desc">If an idea is over budget, save a lower-cost alternative or pair a smaller item with a handwritten note. Prices change, so check the final amount with the retailer before you buy.</p>
+              <button class="save-guide-button" type="button" data-save-guide="gift-budget" aria-pressed="false">♡ <span>Save this guide</span></button>
+            </div>
+          </article>
+
+          <article class="guide-card" id="organize-ideas" data-guide-category="planning">
+            <div class="guide-card-art guide-card-art-mint" aria-hidden="true"><span>📝</span><i>✳</i></div>
+            <div class="guide-body">
+              <span class="guide-store-badge">How-to</span>
+              <p class="article-meta">A 3-minute read · Turn inspiration into a plan</p>
+              <h2 class="guide-title">From a gift idea to an organized list</h2>
+              <p class="guide-desc">When you spot something promising, save it right away with the person’s name and why you think it suits them. A short note like “loves weekend coffee” can make the choice easier to remember later.</p>
+              <h3 class="article-subtitle">A useful list has just four things</h3>
+              <ul class="article-list">
+                <li><strong>Who:</strong> the person and the occasion.</li>
+                <li><strong>What:</strong> the gift idea or product link.</li>
+                <li><strong>Why:</strong> a note about their interest or preference.</li>
+                <li><strong>Budget:</strong> your target and the current price to check.</li>
+              </ul>
+              <p class="guide-desc">Keep two or three options if you are comparing gifts. Once you decide, mark your pick so you do not accidentally buy the same thing twice.</p>
+              <button class="save-guide-button" type="button" data-save-guide="organize-ideas" aria-pressed="false">♡ <span>Save this guide</span></button>
+            </div>
+          </article>
+        </div>
+
+        <p class="guide-empty-state" id="guide-empty-state" hidden>No guides match that search. Try a different word or filter.</p>
+        <div class="compliance-box">
+          <strong>Shopping note:</strong> These are general ideas, not specific product recommendations. Product prices and availability vary; always confirm details with the retailer before purchasing.
+        </div>
+        <div class="guide-app-cta">
+          <h2>Keep your gift ideas organized</h2>
+          <p>Use GiftList & WishList Maker to save ideas, people, and occasion budgets together.</p>
+          <a href="index.html#how-it-works" class="btn btn-primary">Learn about the app</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>🎁 GiftList & WishList Maker</h3>
+          <p>A simple Android companion for keeping gift ideas, people, and occasion budgets organized.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="index.html">Home</a></li>
+            <li><a href="gift-guide.html">Gift Guide</a></li>
+            <li><a href="index.html#how-it-works">About the app</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal & Policies</h4>
+          <ul>
+            <li><a href="privacy.html">Privacy Policy</a></li>
+            <li><a href="terms.html">Terms of Service</a></li>
+            <li><a href="disclosure.html">Affiliate Disclosure</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="contact.html">Contact Support</a></li>
+            <li><a href="mailto:mzdevelopers001@gmail.com">Developer Inquiries</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-disclaimer-panel">
+        <p>GiftList & WishList Maker participates in the Amazon Services LLC Associates Program and may earn from qualifying purchases. Certain content may come from Amazon Services LLC and is provided “as is.”</p>
+        <p>This website and application participate in the eBay Partner Network and the Awin affiliate marketing network. We may earn commissions from qualifying purchases made through partner links.</p>
+        <p>Gift suggestions are general ideas, not specific product recommendations. Prices and availability can change; confirm details with the retailer before purchasing.</p>
+      </div>
+      <div class="footer-bottom">
+        <div>&copy; <span class="current-year">2026</span> MZ Developers. All rights reserved.</div>
+        <div>Designed for Android &bull; Built with Privacy in Mind</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

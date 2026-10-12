@@ -1,4 +1,4 @@
-// api/product.js - Serverless Metadata Resolution Service for Vercel
+// api/product.js - Serverless Metadata Resolution Service
 // Phase 1: Pure Native Multi-Store Extraction Engine
 // Phase 2: Targeted Store-Specific Crawlbase Fallback Engine (Amazon, Walmart, Best Buy, Target, Etsy)
 // Supports eBay Developer Browse API & Store-Specific Parsers
@@ -6,7 +6,7 @@
 const EBAY_CLIENT_ID = process.env.EBAY_CLIENT_ID || '';
 const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET || '';
 const CRAWLBASE_TOKEN = process.env.CRAWLBASE_TOKEN || '';
-const SCRAPFLY_KEY = process.env.SCRAPFLY_KEY || 'scp-live-ae6420642ef04af5b55129940ff4e1ea';
+const SCRAPFLY_KEY = process.env.SCRAPFLY_KEY || '';
 
 // ============================================================================
 // DIAGNOSTIC TEST FLAG: Disable Paid APIs (Crawlbase & Scrapfly)
@@ -40,7 +40,7 @@ function recordRequestLog(entry) {
   if (requestLogs.length > MAX_LOGS) {
     requestLogs.pop();
   }
-  // Permanent structured metric log to Vercel Runtime Logs dashboard
+  // Structured metrics are also written to the runtime logs.
   console.log('[API_METRIC]', JSON.stringify(logObj));
 }
 
@@ -144,7 +144,7 @@ function renderLogsHtml(logs) {
     </h1>
     <div class="diag-banner">
       <strong>⚠️ DIAGNOSTIC TEST MODE ACTIVE:</strong> Paid fallback APIs (Crawlbase &amp; Scrapfly) are <strong>DISABLED</strong> on this serverless instance.
-      <br>Evaluating how <strong>Mobile Edge DOM Fetching (Residential IP)</strong> performs compared to <strong>Server Direct Fetching (Vercel Datacenter IP)</strong> across all 5 stores (Amazon, Walmart, Best Buy, Target, Etsy).
+      <br>Evaluating how <strong>Mobile Edge DOM Fetching (Residential IP)</strong> performs compared to <strong>Server Direct Fetching</strong> across all 5 stores (Amazon, Walmart, Best Buy, Target, Etsy).
     </div>
     <div class="meta">
       Captures real-time metadata resolution requests. Parameters Score indicates how many of the 3 key parameters (Title, Price, Image) were extracted successfully.
@@ -1087,7 +1087,7 @@ module.exports = async function handler(req, res) {
       containerId: CONTAINER_ID,
       containerBootTime: new Date(CONTAINER_BOOT_TIME).toISOString(),
       containerUptimeSec: Math.floor((Date.now() - CONTAINER_BOOT_TIME) / 1000),
-      persistenceNotice: "In-memory logs reflect recent requests handled by this specific warm serverless container instance. For permanent unified log history across all container instances and regions, view the Vercel Project Dashboard -> Logs tab.",
+      persistenceNotice: "In-memory logs reflect recent requests handled by this specific warm serverless instance. For permanent unified log history across instances and regions, view your hosting provider's runtime logs.",
       logs: requestLogs
     });
   }

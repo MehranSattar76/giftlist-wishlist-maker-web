@@ -1,0 +1,988 @@
+- generic [active] [ref=e1]:
+  - link "Skip to content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - link "Navigate to Home Page" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - img "GiftList" [ref=e8]
+        - navigation "Main" [ref=e18]:
+          - list [ref=e19]:
+            - listitem [ref=e20]:
+              - link "Create List" [ref=e21] [cursor=pointer]:
+                - /url: /sign-up?src=header
+            - listitem [ref=e22]:
+              - link "Find Friends" [ref=e23] [cursor=pointer]:
+                - /url: /friends/find-friends
+            - listitem [ref=e24]:
+              - link "Gift Ideas" [ref=e25] [cursor=pointer]:
+                - /url: /gift-ideas
+            - listitem [ref=e26]:
+              - link "Events" [ref=e27] [cursor=pointer]:
+                - /url: /events
+            - listitem [ref=e28]:
+              - link "Cards" [ref=e29] [cursor=pointer]:
+                - /url: /cards
+            - listitem [ref=e30]:
+              - link "Gift Guides" [ref=e31] [cursor=pointer]:
+                - /url: /gift-guides
+            - listitem [ref=e32]:
+              - link "Secret Santa" [ref=e33] [cursor=pointer]:
+                - /url: /exchange
+        - generic [ref=e34]:
+          - button "Switch to dark mode" [ref=e35] [cursor=pointer]
+          - generic [ref=e42]:
+            - link "Log in" [ref=e43] [cursor=pointer]:
+              - /url: /login
+            - link "Sign up" [ref=e44] [cursor=pointer]:
+              - /url: /sign-up?src=home-header
+    - main [ref=e45]:
+      - region [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - heading "Create a gift list for any occasion" [level=1] [ref=e50]: Create a gift listfor any occasion
+            - paragraph [ref=e51]:
+              - generic [ref=e52]: The free wishlist & registry maker.
+              - generic [ref=e53]: Add gifts from any store and share one link with friends and family.
+            - link "Create a free gift list" [ref=e55] [cursor=pointer]:
+              - /url: /sign-up?src=home-hero
+            - list "Rated 4.8 out of 5 from more than 1,000 App Store ratings" [ref=e56]:
+              - listitem [ref=e57]:
+                - strong [ref=e69]: "4.8"
+                - text: from 1K+ App Store ratings
+          - figure [ref=e70]:
+            - 'img "Emily Carter’s My Christmas wishlist on GiftList, as the owner sees it: gifts from several stores on one list." [ref=e71]':
+              - img [ref=e73]:
+                - generic [ref=e74]: giftlist.com
+                - generic [ref=e84]:
+                  - generic [ref=e90]:
+                    - generic [ref=e93]:
+                      - paragraph [ref=e94]: Dec 25, 2026 · Emily Carter
+                      - heading [level=3] [ref=e95]: My Christmas wishlist
+                      - paragraph [ref=e96]: A few things I'd love to unwrap this Christmas.
+                    - generic [ref=e97]:
+                      - generic [ref=e98]: Follow
+                      - generic [ref=e99]: Share
+                  - generic [ref=e100]:
+                    - generic [ref=e101]:
+                      - generic [ref=e102]: Most wanted
+                      - generic [ref=e108]:
+                        - paragraph [ref=e109]: Beats Solo 4 "Cloud Pink"
+                        - paragraph [ref=e110]: $199.99
+                    - generic [ref=e111]:
+                      - generic [ref=e112]: Most wanted
+                      - generic [ref=e118]:
+                        - paragraph [ref=e119]: Nike Dunk Low "Cacao Wow"
+                        - paragraph [ref=e120]: $84.00
+                    - generic [ref=e124]:
+                      - paragraph [ref=e125]: Stanley Quencher H2.0 40oz
+                      - paragraph [ref=e126]: $35.00
+                    - generic [ref=e130]:
+                      - paragraph [ref=e131]: Sol de Janeiro Bum Bum Cream
+                      - paragraph [ref=e132]: $48.00
+                    - generic [ref=e136]:
+                      - paragraph [ref=e137]: lululemon Align Pant
+                      - paragraph [ref=e138]: $98.00
+                    - generic [ref=e142]:
+                      - paragraph [ref=e143]: Le Creuset Dutch Oven
+                      - paragraph [ref=e144]: $419.95
+                    - generic [ref=e145]:
+                      - generic [ref=e146]: Purchased
+                      - generic [ref=e152]:
+                        - paragraph [ref=e153]: UGG Tasman Slipper
+                        - paragraph [ref=e154]: $130.00
+                    - generic [ref=e155]:
+                      - generic [ref=e156]: Purchased
+                      - generic [ref=e162]:
+                        - paragraph [ref=e163]: Away Carry-On
+                        - paragraph [ref=e164]: $295.00
+        - generic "As seen in" [ref=e165]:
+          - generic [ref=e166]:
+            - generic [ref=e167]: As seen in
+            - img "The New York Times" [ref=e168]
+            - img "Google for Startups" [ref=e169]
+            - img "Fast Company" [ref=e170]
+            - img "BBC" [ref=e171]
+            - img "NBC" [ref=e172]
+            - img "Fox" [ref=e173]
+      - region [ref=e175]:
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - heading "One list. Any store." [level=2] [ref=e178]: One list.Any store.
+            - generic [ref=e179]:
+              - paragraph [ref=e180]:
+                - text: The shoes. The bottle.
+                - strong [ref=e181]: The exact shade of that one thing.
+              - paragraph [ref=e182]: Paste a product link and the details fill in, or add an item yourself.
+          - group "Example gifts you could add to one list" [ref=e183]:
+            - figure "In your size" [ref=e184]:
+              - img "Red ballet-style sneaker" [ref=e185]
+            - figure "In your favorite color" [ref=e189]:
+              - img "Owala FreeSip water bottle" [ref=e190]
+            - figure "Exactly your style" [ref=e194]:
+              - img "Zaza sunglasses" [ref=e195]
+            - figure "The one you keep eyeing" [ref=e199]:
+              - img "Le Creuset Dutch oven" [ref=e200]
+          - generic [ref=e204]:
+            - list "Stores people add gifts from" [ref=e205]:
+              - listitem [ref=e206]:
+                - img "Amazon" [ref=e208]
+              - listitem [ref=e209]:
+                - img "Target" [ref=e211]
+              - listitem [ref=e212]:
+                - img "Etsy" [ref=e214]
+              - listitem [ref=e215]:
+                - img "Nike" [ref=e217]
+              - listitem [ref=e218]:
+                - img "Sephora" [ref=e220]
+              - listitem [ref=e221]:
+                - img "lululemon" [ref=e223]
+              - listitem [ref=e224]:
+                - img "Apple" [ref=e226]
+              - listitem [ref=e227]:
+                - img "Nordstrom" [ref=e229]
+              - listitem [ref=e230]:
+                - img "IKEA" [ref=e232]
+              - listitem [ref=e233]:
+                - img "LEGO" [ref=e235]
+              - listitem [ref=e236]:
+                - img "Lovevery" [ref=e238]
+              - listitem [ref=e239]:
+                - img "Anthropologie" [ref=e241]
+            - paragraph [ref=e242]: Amazon, Target, Etsy, Nike, Sephora, lululemon and thousands more, big and small.
+      - region [ref=e244]:
+        - generic [ref=e245]:
+          - generic [ref=e246]:
+            - heading "Every occasion, one place." [level=2] [ref=e247]: Every occasion,one place.
+            - paragraph [ref=e248]: Birthdays, Christmas, weddings, new babies, new homes. Make a list for each one, or keep one list for everything.
+          - list "Occasion pages" [ref=e249]:
+            - listitem [ref=e250]:
+              - link "Christmas list" [ref=e251] [cursor=pointer]:
+                - /url: /christmas-wishlist
+            - listitem [ref=e252]:
+              - link "Birthday wishlist" [ref=e253] [cursor=pointer]:
+                - /url: /birthday-wishlist
+            - listitem [ref=e254]:
+              - link "Wedding registry" [ref=e255] [cursor=pointer]:
+                - /url: /wedding-registry
+            - listitem [ref=e256]:
+              - link "Baby registry" [ref=e257] [cursor=pointer]:
+                - /url: /baby-registry
+            - listitem [ref=e258]:
+              - link "Housewarming registry" [ref=e259] [cursor=pointer]:
+                - /url: /housewarming-registry
+            - listitem [ref=e260]:
+              - link "Graduation wishlist" [ref=e261] [cursor=pointer]:
+                - /url: /graduation-wishlist
+            - listitem [ref=e262]:
+              - link "Holiday wishlist" [ref=e263] [cursor=pointer]:
+                - /url: /holiday-wishlist
+            - listitem [ref=e264]:
+              - link "Gift registry" [ref=e265] [cursor=pointer]:
+                - /url: /gift-registry
+            - listitem [ref=e266]:
+              - link "Wishlist maker" [ref=e267] [cursor=pointer]:
+                - /url: /wishlist
+            - listitem [ref=e268]:
+              - link "College dorm wishlist" [ref=e269] [cursor=pointer]:
+                - /url: /college-dorm-wishlist
+            - listitem [ref=e270]:
+              - link "Back to school" [ref=e271] [cursor=pointer]:
+                - /url: /back-to-school-wishlist
+            - listitem [ref=e272]:
+              - link "Teacher classroom wishlist" [ref=e273] [cursor=pointer]:
+                - /url: /teacher-classroom-wishlist
+            - listitem [ref=e274]:
+              - link "Charity gift list" [ref=e275] [cursor=pointer]:
+                - /url: /charity
+            - listitem [ref=e276]:
+              - link "Family wishlist" [ref=e277] [cursor=pointer]:
+                - /url: /family-wishlist
+      - region [ref=e279]:
+        - generic [ref=e280]:
+          - generic [ref=e281]:
+            - heading "They get the hint. You get the surprise." [level=2] [ref=e282]: They get the hint.You get the surprise.
+            - paragraph [ref=e283]: Share one link. Friends and family see what’s already reserved, so they can avoid duplicate gifts. Who reserved what stays hidden from you until you reveal it.
+            - generic [ref=e284]:
+              - generic [ref=e285]:
+                - term [ref=e286]: What gift-givers see
+                - definition [ref=e290]: Which gifts are already reserved, so they can coordinate before shopping. They buy from the retailer and mark the gift as purchased in two taps. No account needed.
+              - generic [ref=e291]:
+                - term [ref=e292]: What you see
+                - definition [ref=e296]: Your list, as you built it. After the occasion, reveal who gave what and send a thank-you.
+          - generic [ref=e297]:
+            - figure "Choose whose view to show Gift-givers see what’s already reserved." [ref=e298]:
+              - generic [ref=e299]:
+                - 'img "The same list as a gift-giver sees it: Buy buttons on available gifts and a Purchased badge on the UGG Tasman Slipper." [ref=e300]':
+                  - img [ref=e308]:
+                    - generic [ref=e322]:
+                      - paragraph [ref=e325]:
+                        - generic [ref=e326]: Emily Carter
+                        - generic [ref=e327]: · Dec 25, 2026
+                      - heading [level=3] [ref=e328]: My Christmas wishlist
+                      - paragraph [ref=e329]: A few things I'd love to unwrap this Christmas.
+                      - generic [ref=e330]:
+                        - generic [ref=e331]: Share
+                        - generic [ref=e336]: Follow
+                    - generic [ref=e338]:
+                      - generic [ref=e339]:
+                        - generic [ref=e340]: Most wanted
+                        - generic [ref=e346]:
+                          - paragraph [ref=e347]: Beats Solo 4 "Cloud Pink"
+                          - paragraph [ref=e349]: $199.99
+                          - generic [ref=e350]: Buy
+                      - generic [ref=e356]:
+                        - generic [ref=e357]: Most wanted
+                        - generic [ref=e363]:
+                          - paragraph [ref=e364]: Nike Dunk Low "Cacao Wow"
+                          - paragraph [ref=e366]: $84.00
+                          - generic [ref=e367]: Buy
+                      - generic [ref=e376]:
+                        - paragraph [ref=e377]: Stanley Quencher H2.0 40oz
+                        - paragraph [ref=e379]: $35.00
+                        - generic [ref=e380]: Buy
+                      - generic [ref=e386]:
+                        - generic [ref=e387]: Purchased
+                        - generic [ref=e393]:
+                          - paragraph [ref=e394]: UGG Tasman Slipper
+                          - paragraph [ref=e396]: $130.00
+                - 'img "Example: Maya reserved the UGG Tasman Slipper. Hidden from Emily." [ref=e399]':
+                  - generic [ref=e400]:
+                    - text: Maya reserved the UGG Tasman Slipper
+                    - generic [ref=e401]: Hidden from Emily
+              - generic [ref=e404]:
+                - group "Choose whose view to show" [ref=e405]:
+                  - button "Emily’s view" [ref=e406] [cursor=pointer]
+                  - button "Gift-giver view" [pressed] [ref=e407] [cursor=pointer]
+                - generic [ref=e408]: Gift-givers see what’s already reserved.
+            - figure "After the occasion, reveal who gave what." [ref=e409]:
+              - 'img "The reveal screen: all gifts revealed, each with who purchased it." [ref=e410]':
+                - generic [ref=e417]:
+                  - img:
+                    - generic:
+                      - paragraph: ✨ All gifts revealed!
+                    - generic:
+                      - generic:
+                        - generic:
+                          - paragraph: Beats Solo 4 "Cloud Pink"
+                          - generic:
+                            - paragraph: $199.99
+                            - generic: · Amazon
+                          - generic:
+                            - generic: SM
+                            - paragraph: Sarah M.
+                        - generic: Purchased
+                      - generic:
+                        - generic:
+                          - paragraph: Stanley Quencher H2.0 40oz
+                          - generic:
+                            - paragraph: $35.00
+                            - generic: · Target
+                          - generic:
+                            - generic: JR
+                            - paragraph: Jake R.
+                        - generic: Purchased
+                      - generic:
+                        - generic:
+                          - paragraph: Sol de Janeiro Bum Bum Cream
+                          - generic:
+                            - paragraph: $48.00
+                            - generic: · Sephora
+                          - generic:
+                            - generic: EC
+                            - paragraph: Emily C.
+                        - generic: Purchased
+                      - generic:
+                        - generic:
+                          - paragraph: Nike Dunk Low "Cacao Wow"
+                          - generic:
+                            - paragraph: $84.00
+                            - generic: · Nike
+                          - generic:
+                            - generic: M
+                            - paragraph: Mom
+                        - generic: Purchased
+                      - generic:
+                        - generic:
+                          - paragraph: lululemon Align Pant
+                          - generic:
+                            - paragraph: $98.00
+                            - generic: · lululemon
+                          - generic:
+                            - generic: RK
+                            - paragraph: Rachel K.
+                        - generic: Purchased
+                      - generic:
+                        - generic:
+                          - paragraph: Le Creuset Dutch Oven
+                          - generic:
+                            - paragraph: $419.95
+                            - generic: · Williams Sonoma
+                          - generic:
+                            - generic: D
+                            - paragraph: Dad
+                        - generic: Purchased
+      - region [ref=e422]:
+        - generic [ref=e423]:
+          - generic [ref=e424]:
+            - heading "Save it while you shop. Share one link." [level=2] [ref=e425]: Save it while you shop.Share one link.
+            - list [ref=e426]:
+              - listitem [ref=e427]:
+                - generic [ref=e428]:
+                  - heading "Save from any store, as you browse." [level=3] [ref=e429]
+                  - paragraph [ref=e430]: Shop inside the GiftList app and tap Add, or use the browser extension on your computer. Pasting a link works too.
+              - listitem [ref=e431]:
+                - generic [ref=e432]:
+                  - heading "Share one link." [level=3] [ref=e433]
+                  - paragraph [ref=e434]: Send your list by text, email or the family group chat. Gift-givers don’t need an account.
+              - listitem [ref=e435]:
+                - generic [ref=e436]:
+                  - heading "Reveal who gave what, then say thanks." [level=3] [ref=e437]
+                  - paragraph [ref=e438]: After the occasion, reveal the gift-givers and send each one a thank-you card from the same list.
+            - link "Create a free gift list" [ref=e439] [cursor=pointer]:
+              - /url: /sign-up?src=home-how-it-works
+          - figure "The GiftList app’s built-in browser, and the extension on the web. Same product page, one tap either way." [ref=e440]:
+            - generic [ref=e441]:
+              - generic [ref=e442]: Nike Dunk Low Women’s Shoes | Nike
+              - generic [ref=e448]:
+                - generic [ref=e449]: nike.com/t/dunk-low-womens-shoes
+                - img "The GiftList extension button, pinned beside the address bar" [ref=e450]:
+                  - generic [aria-hidden] [ref=e458]: Add to GiftList
+              - img "A Nike Dunk Low product page open in a desktop browser." [ref=e460]
+            - img "The GiftList app’s built-in browser on a product page, with the Add button in its toolbar." [ref=e461]:
+              - generic [ref=e468]:
+                - img:
+                  - generic:
+                    - generic: nike.com
+                    - generic:
+                      - generic:
+                        - paragraph: Women's Shoes
+                        - paragraph: Nike Dunk Low
+                        - paragraph: Cacao Wow / Sail / Cacao Wow
+                        - generic: $115
+                        - generic:
+                          - generic: (42)
+                          - generic: 2,847 reviews
+                        - generic:
+                          - paragraph: Select Color
+                        - generic:
+                          - paragraph: Select Size
+                          - generic:
+                            - generic: "6"
+                            - generic: "6.5"
+                            - generic: "7"
+                            - generic: "7.5"
+                            - generic: "8"
+                            - generic: "8.5"
+                    - generic: Add
+            - generic [ref=e472]:
+              - generic [ref=e473]:
+                - link "Download on the App Store" [ref=e474] [cursor=pointer]:
+                  - /url: https://apps.apple.com/us/app/giftlist-wishlist-registry/id6736836276?utm_source=giftlist_web&utm_medium=badge&utm_campaign=app_install&utm_content=homepage_save_section&pt=125683460&ct=homepage_save_section&mt=8
+                - link "Get it on Google Play" [ref=e475] [cursor=pointer]:
+                  - /url: https://play.google.com/store/apps/details?id=com.giftlist&referrer=utm_source%3Dgiftlist_web%26utm_medium%3Dbadge%26utm_campaign%3Dapp_install%26utm_content%3Dhomepage_save_section
+              - paragraph [ref=e476]:
+                - strong [ref=e488]: "4.8"
+                - text: · 1K+ ratings on the App Store
+      - region [ref=e490]:
+        - generic [ref=e491]:
+          - generic [ref=e492]:
+            - heading "After the gifts, say thanks." [level=2] [ref=e493]: After the gifts,say thanks.
+            - paragraph [ref=e494]: Cards and events are built in. Send a thank-you that opens on their screen; plan the party and let guests shop the list.
+          - generic [ref=e495]:
+            - generic [ref=e496]:
+              - heading "A card, in an envelope." [level=3] [ref=e497]
+              - paragraph [ref=e498]: Pick a design, write your message and share one link. Send a thank-you after the gifts arrive, without asking who gave what.
+              - link "Create a card" [ref=e499] [cursor=pointer]:
+                - /url: /cards
+              - figure "Click the card to watch it open." [ref=e502]:
+                - button "Preview the Party Type card opening" [ref=e503] [cursor=pointer]:
+                  - img "Card front reading “Happy birthday to you”" [ref=e516]
+            - generic [ref=e523]:
+              - heading "An event, with the list attached." [level=3] [ref=e524]
+              - paragraph [ref=e525]: Invite guests, collect RSVPs and attach a gift list they can shop from the invitation.
+              - link "Create an event" [ref=e526] [cursor=pointer]:
+                - /url: /events
+              - figure [ref=e529]:
+                - img "A birthday event page on GiftList with an RSVP prompt and the attached gift list." [ref=e530]:
+                  - img [ref=e532]:
+                    - generic [ref=e533]: giftlist.com
+                    - generic [ref=e543]:
+                      - generic:
+                        - generic:
+                          - generic:
+                            - heading [level=3]: Maya’s 3rd Birthday
+                            - paragraph: Saturday, September 12 at 2:00 PM
+                            - paragraph: 📍 Highland Park, Dallas
+                            - generic: Hosted by Anna Adams
+                        - generic:
+                          - generic:
+                            - generic: Gift list
+                            - generic: Who's coming
+                          - generic:
+                            - paragraph: Are you coming?
+                            - paragraph: Tap an answer to let the host know.
+                            - generic:
+                              - generic:
+                                - generic: 🎉
+                                - generic: Going
+                              - generic:
+                                - generic: 😢
+                                - generic: Can’t go
+                          - heading [level=4]: Gift list
+                          - paragraph: Maya’s Birthday List →
+                          - generic:
+                            - generic:
+                              - generic:
+                                - paragraph: Melissa & Doug Cutting Fruit Set
+                                - paragraph: $25.00
+                                - generic: Buy
+                            - generic:
+                              - generic:
+                                - paragraph: Tiny Land Play Tent
+                                - paragraph: $75.00
+                                - generic: Buy
+                            - generic:
+                              - generic:
+                                - paragraph: tonies Disney Minnie Mouse
+                                - paragraph: $17.00
+                                - generic: Buy
+                          - generic: 24 going · 3 maybe
+      - region [ref=e545]:
+        - generic [ref=e546]:
+          - heading "Set it up once. Repeat it year after year." [level=2] [ref=e547]: Set it up once.Repeat it year after year.
+          - paragraph [ref=e548]:
+            - text: "One free account for the whole gifting year: wishlists and registries for any occasion, family Groups, Secret Santa, cards and events."
+            - generic [ref=e549]: The moments that matter, remembered.
+          - list [ref=e550]:
+            - listitem [ref=e551]:
+              - generic [ref=e554]: Your lists stay put between occasions, ready for the next birthday or holiday.
+            - listitem [ref=e555]:
+              - generic [ref=e558]: Add a birthday and GiftList reminds you before it comes around.
+            - listitem [ref=e559]:
+              - generic [ref=e562]: Your family group keeps everyone’s shared lists in one place.
+      - region [ref=e564]:
+        - generic [ref=e565]:
+          - generic [ref=e566]:
+            - generic [ref=e567]:
+              - heading "Your home for holiday gifting." [level=2] [ref=e568]: Your home forholiday gifting.
+              - paragraph [ref=e569]: Christmas wishlists, family Groups and Secret Santa, in one free account.
+              - link "Create my Christmas wishlist" [ref=e570] [cursor=pointer]:
+                - /url: /christmas-wishlist
+            - img "Santa waves hello with a blue wrapped gift." [ref=e573]
+          - generic [ref=e574]:
+            - generic [ref=e575]:
+              - heading "Your family’s wishlists, together." [level=3] [ref=e576]
+              - paragraph [ref=e577]: Invite family and friends to a group and keep up with the wishlists they choose to share, in one place.
+              - link "Create your family group" [ref=e578] [cursor=pointer]:
+                - /url: /family-wishlist
+              - generic [ref=e582]:
+                - generic [ref=e583]:
+                  - generic [ref=e585]: 🏡
+                  - generic [ref=e586]:
+                    - paragraph [ref=e587]: The Morgan family
+                    - paragraph [ref=e588]: 4 people
+                - generic [ref=e589]: Secret Santa linked
+                - table "Example family members" [ref=e596]:
+                  - row [ref=e597]:
+                    - columnheader "Member" [ref=e598]
+                    - columnheader "Birthday" [ref=e599]
+                    - columnheader "Lists" [ref=e600]
+                  - row [ref=e601]:
+                    - cell "Anna Morgan" [ref=e602]:
+                      - paragraph [ref=e605]: Anna Morgan
+                    - cell "In 5 days" [ref=e606]
+                    - cell "2 lists" [ref=e611]
+                  - row [ref=e612]:
+                    - cell "Derek Morgan" [ref=e613]:
+                      - paragraph [ref=e616]: Derek Morgan
+                    - cell "Apr 22" [ref=e617]
+                    - cell "1 list" [ref=e618]
+                  - row [ref=e619]:
+                    - cell "Sarah Morgan" [ref=e620]:
+                      - paragraph [ref=e623]: Sarah Morgan
+                    - cell "Aug 8" [ref=e624]
+                    - cell "3 lists" [ref=e625]
+                  - row [ref=e626]:
+                    - cell "Joe Morgan" [ref=e627]:
+                      - paragraph [ref=e630]: Joe Morgan
+                    - cell "Feb 5" [ref=e631]
+                    - cell "1 list" [ref=e632]
+                - generic [ref=e637]:
+                  - text: Anna’s birthday is coming up.
+                  - strong [ref=e638]: Plan her card ahead.
+            - generic [ref=e639]:
+              - heading "Secret Santa, with hints built in." [level=3] [ref=e640]
+              - paragraph [ref=e641]: Draw names for up to 100 people. Everyone links a wishlist or answers Mystery Q&A, so whoever draws their name has somewhere to start.
+              - link "Create a free Secret Santa" [ref=e642] [cursor=pointer]:
+                - /url: /exchange
+              - 'img "Example participant view: Santa’s match is Mrs Claus, with a View wishlist action." [ref=e646]':
+                - generic [ref=e648]:
+                  - generic [ref=e649]:
+                    - generic [ref=e652]:
+                      - generic [ref=e653]: North Pole Secret Santa
+                      - generic [ref=e654]: December 25 · $50 budget
+                    - generic [ref=e655]: +6 more
+                    - generic [ref=e666]:
+                      - generic [ref=e667]: Overview
+                      - generic [ref=e668]: Participants
+                      - generic [ref=e669]: Activity
+                  - generic [ref=e671]:
+                    - paragraph [ref=e673]: Your Secret Santa match
+                    - generic [ref=e674]:
+                      - generic [ref=e678]:
+                        - heading [level=3] [ref=e679]: Mrs Claus
+                        - paragraph [ref=e680]: "@mrsclaus"
+                      - button [ref=e683] [cursor=pointer]: View wishlist
+      - region [ref=e685]:
+        - generic [ref=e686]:
+          - generic [ref=e687]:
+            - heading "Stuck for ideas? Browse, then save." [level=2] [ref=e688]: Stuck for ideas?Browse, then save.
+            - paragraph [ref=e689]: Gift ideas by person and occasion, from stores you know. Save one to your list in a tap.
+            - link "Browse gift ideas" [ref=e690] [cursor=pointer]:
+              - /url: /gift-ideas
+          - figure "Gift ideas, with one tap to save." [ref=e693]:
+            - generic [ref=e694]:
+              - generic [ref=e695]: Gift Ideas | GiftList
+              - generic [ref=e701]: giftlist.com/gift-ideas
+              - group "Gift Ideas feed with product cards at their natural image proportions" [ref=e703]:
+                - generic [ref=e704]:
+                  - generic [ref=e705]: Gift Ideas
+                  - generic [ref=e706]: Search products
+                - generic [ref=e710]:
+                  - generic [ref=e711]: Category
+                  - generic [ref=e712]: Gender
+                  - generic [ref=e713]: Age
+                  - generic [ref=e714]: Filters
+                - generic [ref=e715]:
+                  - article [ref=e716]:
+                    - generic [ref=e720]:
+                      - generic [ref=e721]: Speedcat Ballet Suede Sneakers
+                      - generic [ref=e722]:
+                        - generic [ref=e723]: $80.00
+                        - generic [ref=e724]: PUMA
+                  - article [ref=e725]:
+                    - generic [ref=e729]:
+                      - generic [ref=e730]: Ambient Lighting Edit Palette
+                      - generic [ref=e731]:
+                        - generic [ref=e732]: $84.00
+                        - generic [ref=e733]: Hourglass
+                  - article [ref=e734]:
+                    - generic [ref=e738]:
+                      - generic [ref=e739]: Round Mini Shoulder Bag
+                      - generic [ref=e740]:
+                        - generic [ref=e741]: $30.00
+                        - generic [ref=e742]: UNIQLO
+                  - article [ref=e743]:
+                    - generic [ref=e747]:
+                      - generic [ref=e748]: Beats Solo 4 "Cloud Pink"
+                      - generic [ref=e749]:
+                        - generic [ref=e750]: $199.99
+                        - generic [ref=e751]: Amazon
+                  - article [ref=e752]:
+                    - generic [ref=e756]:
+                      - generic [ref=e757]: LE VERNIS Nail Colour
+                      - generic [ref=e758]:
+                        - generic [ref=e759]: $34.00
+                        - generic [ref=e760]: CHANEL
+                  - article [ref=e761]:
+                    - generic [ref=e765]:
+                      - generic [ref=e766]: We The Free Blair Suede Jacket
+                      - generic [ref=e767]:
+                        - generic [ref=e768]: $168.00
+                        - generic [ref=e769]: Free People
+                  - article [ref=e770]:
+                    - generic [ref=e774]:
+                      - generic [ref=e775]: Zaza Sunglasses, Dragonfruit
+                      - generic [ref=e776]:
+                        - generic [ref=e777]: $178.00
+                        - generic [ref=e778]: Cult Gaia
+                  - article [ref=e779]:
+                    - generic [ref=e783]:
+                      - generic [ref=e784]: lululemon Align Pant
+                      - generic [ref=e785]:
+                        - generic [ref=e786]: $98.00
+                        - generic [ref=e787]: lululemon
+                  - article [ref=e788]:
+                    - generic [ref=e792]:
+                      - generic [ref=e793]: Le Creuset Dutch Oven
+                      - generic [ref=e794]:
+                        - generic [ref=e795]: $419.95
+                        - generic [ref=e796]: Williams Sonoma
+                  - article [ref=e797]:
+                    - generic [ref=e801]:
+                      - generic [ref=e802]: UGG Tasman Slipper
+                      - generic [ref=e803]:
+                        - generic [ref=e804]: $130.00
+                        - generic [ref=e805]: UGG
+                  - article [ref=e806]:
+                    - generic [ref=e810]:
+                      - generic [ref=e811]: Owala FreeSip 24 oz
+                      - generic [ref=e812]:
+                        - generic [ref=e813]: $28.00
+                        - generic [ref=e814]: Amazon
+                  - article [ref=e815]:
+                    - generic [ref=e819]:
+                      - generic [ref=e820]: Nike Dunk Low "Cacao Wow"
+                      - generic [ref=e821]:
+                        - generic [ref=e822]: $84.00
+                        - generic [ref=e823]: Nike
+      - region [ref=e826]:
+        - generic [ref=e827]:
+          - generic [ref=e828]:
+            - heading "Good lists. Happy gift-givers." [level=2] [ref=e829]: Good lists.Happy gift-givers.
+            - list [ref=e830]:
+              - listitem [ref=e831]:
+                - strong [ref=e843]: "4.8"
+                - text: from 1K+ App Store ratings
+            - link "Read the App Store reviews" [ref=e844] [cursor=pointer]:
+              - /url: https://apps.apple.com/us/app/giftlist-wishlist-registry/id6736836276?utm_source=giftlist_web&utm_medium=text_link&utm_campaign=app_install&utm_content=reviews_link&pt=125683460&ct=reviews_link&mt=8
+          - generic [ref=e845]:
+            - figure [ref=e846]:
+              - paragraph [ref=e847]:
+                - generic [ref=e859]: 5 out of 5 stars
+              - blockquote [ref=e860]: “This app makes it so easy for me to share with family and friends when they ask what I want. And I can include a variety of price ranges.”
+              - generic [ref=e861]:
+                - strong [ref=e862]: bwphotodiva
+                - text: · App Store review, December 2025
+            - figure [ref=e863]:
+              - paragraph [ref=e864]:
+                - generic [ref=e876]: 5 out of 5 stars
+              - blockquote [ref=e877]: “Best app for any type of wishlist. This list is so easy to follow even my dad can successfully get what I want for Christmas without having to ask me.”
+              - generic [ref=e878]:
+                - strong [ref=e879]: "-jbjuvjigvjddg"
+                - text: · App Store review excerpt, November 2025
+            - figure [ref=e880]:
+              - paragraph [ref=e881]:
+                - generic [ref=e893]: 5 out of 5 stars
+              - blockquote [ref=e894]: “Every year family asks what my kids want for Christmas and love when I send them a list… It’s really easy to use, the layout is clean and simple. Really love it so far!”
+              - generic [ref=e895]:
+                - strong [ref=e896]: Ashfecht
+                - text: · App Store review excerpt, November 2025
+            - figure [ref=e897]:
+              - paragraph [ref=e898]:
+                - generic [ref=e910]: 5 out of 5 stars
+              - blockquote [ref=e911]: “It lets me pick for all type of stores without even having to go to a different tab!”
+              - generic [ref=e912]:
+                - strong [ref=e913]: HiiiiiiiiBasketball
+                - text: · App Store review excerpt, November 2025
+      - region [ref=e915]:
+        - generic [ref=e916]:
+          - generic [ref=e917]:
+            - heading "A few things before you wish." [level=2] [ref=e918]: A few thingsbefore you wish.
+            - paragraph [ref=e919]:
+              - text: Gift list questions, answered.
+              - link "See all FAQs" [ref=e920] [cursor=pointer]:
+                - /url: /faq
+          - generic [ref=e921]:
+            - group [ref=e922]:
+              - generic "What is GiftList?" [ref=e923] [cursor=pointer]
+              - paragraph [ref=e928]:
+                - text: GiftList is a free wishlist, gift registry and Secret Santa app. Add gifts from any online store to one list for birthdays, holidays, weddings, babies and more, share the link, and let friends and family reserve gifts from that link without an account so they can see what’s already taken. To get started,
+                - link "sign up for a free GiftList account" [ref=e929] [cursor=pointer]:
+                  - /url: /sign-up
+                - text: and create your first list.
+            - group [ref=e930]:
+              - generic "Is GiftList free to use?" [ref=e931] [cursor=pointer]
+            - group [ref=e933]:
+              - generic "Someone shared a gift list with me. How do I buy and reserve items? Help me understand how GiftList works." [ref=e934] [cursor=pointer]
+            - group [ref=e936]:
+              - generic "Do I need to create an account to use GiftList?" [ref=e937] [cursor=pointer]
+            - group [ref=e939]:
+              - generic "Can I add items from any website?" [ref=e940] [cursor=pointer]
+      - region [ref=e943]:
+        - generic [ref=e944]:
+          - heading "Next time they ask what you want, send them your gift list." [level=2] [ref=e945]: Next time they ask what you want,send them your gift list.
+          - paragraph [ref=e946]: The easiest way to exchange gifts with friends and family. Free, for any occasion.
+          - link "Create a free gift list" [ref=e948] [cursor=pointer]:
+            - /url: /sign-up?src=home-closer
+          - generic [ref=e949]:
+            - generic [ref=e950]:
+              - link "Download on the App Store" [ref=e951] [cursor=pointer]:
+                - /url: https://apps.apple.com/us/app/giftlist-wishlist-registry/id6736836276?utm_source=giftlist_web&utm_medium=badge&utm_campaign=app_install&utm_content=homepage_closer&pt=125683460&ct=homepage_closer&mt=8
+              - link "Get it on Google Play" [ref=e952] [cursor=pointer]:
+                - /url: https://play.google.com/store/apps/details?id=com.giftlist&referrer=utm_source%3Dgiftlist_web%26utm_medium%3Dbadge%26utm_campaign%3Dapp_install%26utm_content%3Dhomepage_closer
+            - paragraph [ref=e953]:
+              - strong [ref=e965]: "4.8"
+              - text: · 1K+ ratings on the App Store
+    - contentinfo [ref=e966]:
+      - generic [ref=e967]:
+        - generic [ref=e968]:
+          - link "Navigate to Home Page" [ref=e969] [cursor=pointer]:
+            - /url: /
+            - img "GiftList" [ref=e970]
+          - paragraph [ref=e979]: The best wishlist maker for birthdays, Christmas, weddings, and every occasion. Add gifts from any store — completely free.
+          - generic [ref=e980]:
+            - link "Follow GiftList on Facebook (opens in new window)" [ref=e981] [cursor=pointer]:
+              - /url: https://www.facebook.com/profile.php?id=100057762482084
+            - link "Follow GiftList on YouTube (opens in new window)" [ref=e984] [cursor=pointer]:
+              - /url: https://www.youtube.com/channel/UCvi0dGEvvP1gEJW7mxbtl4A
+            - link "Follow GiftList on TikTok (opens in new window)" [ref=e987] [cursor=pointer]:
+              - /url: https://www.tiktok.com/@giftlist
+            - link "Follow GiftList on Instagram (opens in new window)" [ref=e990] [cursor=pointer]:
+              - /url: https://www.instagram.com/giftlist_official/
+            - link "Follow GiftList on X (opens in new window)" [ref=e993] [cursor=pointer]:
+              - /url: https://twitter.com/join_giftlist
+            - link "Follow GiftList on Pinterest (opens in new window)" [ref=e996] [cursor=pointer]:
+              - /url: https://www.pinterest.com/giftlist_official/
+        - 'navigation "Footer: Wishlist Maker" [ref=e999]':
+          - heading "Wishlist Maker" [level=3] [ref=e1000]
+          - list [ref=e1001]:
+            - listitem [ref=e1002]:
+              - link "Family Wishlist" [ref=e1003] [cursor=pointer]:
+                - /url: /family-wishlist
+            - listitem [ref=e1004]:
+              - link "Birthday Wishlist" [ref=e1005] [cursor=pointer]:
+                - /url: /birthday-wishlist
+            - listitem [ref=e1006]:
+              - link "Christmas List" [ref=e1007] [cursor=pointer]:
+                - /url: /christmas-wishlist
+            - listitem [ref=e1008]:
+              - link "Wedding Registry" [ref=e1009] [cursor=pointer]:
+                - /url: /wedding-registry
+            - listitem [ref=e1010]:
+              - link "Baby Registry" [ref=e1011] [cursor=pointer]:
+                - /url: /baby-registry
+            - listitem [ref=e1012]:
+              - link "Graduation Wishlist" [ref=e1013] [cursor=pointer]:
+                - /url: /graduation-wishlist
+            - listitem [ref=e1014]:
+              - link "Housewarming Registry" [ref=e1015] [cursor=pointer]:
+                - /url: /housewarming-registry
+            - listitem [ref=e1016]:
+              - link "Gift Registry" [ref=e1017] [cursor=pointer]:
+                - /url: /gift-registry
+            - listitem [ref=e1018]:
+              - link "Holiday Wishlist" [ref=e1019] [cursor=pointer]:
+                - /url: /holiday-wishlist
+            - listitem [ref=e1020]:
+              - link "Wishlist Maker" [ref=e1021] [cursor=pointer]:
+                - /url: /wishlist
+            - listitem [ref=e1022]:
+              - link "College Dorm Wishlist" [ref=e1023] [cursor=pointer]:
+                - /url: /college-dorm-wishlist
+            - listitem [ref=e1024]:
+              - link "Back to School" [ref=e1025] [cursor=pointer]:
+                - /url: /back-to-school-wishlist
+            - listitem [ref=e1026]:
+              - link "Teacher Classroom Wishlist" [ref=e1027] [cursor=pointer]:
+                - /url: /teacher-classroom-wishlist
+            - listitem [ref=e1028]:
+              - link "Charity Gift List" [ref=e1029] [cursor=pointer]:
+                - /url: /charity
+        - 'navigation "Footer: Discover" [ref=e1030]':
+          - heading "Discover" [level=3] [ref=e1031]
+          - list [ref=e1032]:
+            - listitem [ref=e1033]:
+              - link "Gift Ideas" [ref=e1034] [cursor=pointer]:
+                - /url: /gift-ideas
+            - listitem [ref=e1035]:
+              - link "Gift Guides" [ref=e1036] [cursor=pointer]:
+                - /url: /gift-guides
+            - listitem [ref=e1037]:
+              - link "Secret Santa Gift Ideas" [ref=e1038] [cursor=pointer]:
+                - /url: /gift-ideas/secret-santa
+            - listitem [ref=e1039]:
+              - link "White Elephant Gifts" [ref=e1040] [cursor=pointer]:
+                - /url: /gift-ideas/white-elephant
+            - listitem [ref=e1041]:
+              - link "Gifts for Your Boss" [ref=e1042] [cursor=pointer]:
+                - /url: /gift-ideas/gifts-for-boss
+            - listitem [ref=e1043]:
+              - link "Gifts for Employees" [ref=e1044] [cursor=pointer]:
+                - /url: /gift-ideas/gifts-for-employees
+            - listitem [ref=e1045]:
+              - link "Gifts for Coworkers" [ref=e1046] [cursor=pointer]:
+                - /url: /gift-ideas/gifts-for-coworkers
+            - listitem [ref=e1047]:
+              - link "Style & Accessories" [ref=e1048] [cursor=pointer]:
+                - /url: /gift-ideas/style-accessories
+            - listitem [ref=e1049]:
+              - link "Jewelry" [ref=e1050] [cursor=pointer]:
+                - /url: /gift-ideas/jewelry
+            - listitem [ref=e1051]:
+              - link "Beauty & Self-Care" [ref=e1052] [cursor=pointer]:
+                - /url: /gift-ideas/beauty-self-care
+            - listitem [ref=e1053]:
+              - link "Home & Living" [ref=e1054] [cursor=pointer]:
+                - /url: /gift-ideas/home-living
+            - listitem [ref=e1055]:
+              - link "Kitchen & Bar" [ref=e1056] [cursor=pointer]:
+                - /url: /gift-ideas/kitchen-bar
+            - listitem [ref=e1057]:
+              - link "Tech & Gadgets" [ref=e1058] [cursor=pointer]:
+                - /url: /gift-ideas/tech-gadgets
+            - listitem [ref=e1059]:
+              - link "Toys & Games" [ref=e1060] [cursor=pointer]:
+                - /url: /gift-ideas/toys-games
+            - listitem [ref=e1061]:
+              - link "Wellness & Fitness" [ref=e1062] [cursor=pointer]:
+                - /url: /gift-ideas/wellness-fitness
+            - listitem [ref=e1063]:
+              - link "Pet Lovers" [ref=e1064] [cursor=pointer]:
+                - /url: /gift-ideas/pet-lovers
+            - listitem [ref=e1065]:
+              - link "Art & Creativity" [ref=e1066] [cursor=pointer]:
+                - /url: /gift-ideas/art-creativity
+            - listitem [ref=e1067]:
+              - link "Hobbies & DIY" [ref=e1068] [cursor=pointer]:
+                - /url: /gift-ideas/hobbies-diy
+            - listitem [ref=e1069]:
+              - link "Unique Finds" [ref=e1070] [cursor=pointer]:
+                - /url: /gift-ideas/unique-finds
+            - listitem [ref=e1071]:
+              - link "Baby & Nursery" [ref=e1072] [cursor=pointer]:
+                - /url: /gift-ideas/baby-nursery
+        - 'navigation "Footer: Free Tools & Games" [ref=e1073]':
+          - heading "Free Tools & Games" [level=3] [ref=e1074]
+          - list [ref=e1075]:
+            - listitem [ref=e1076]:
+              - link "Secret Santa Generator" [ref=e1077] [cursor=pointer]:
+                - /url: /tools/secret-santa-generator
+            - listitem [ref=e1078]:
+              - link "Gift Exchange Quiz" [ref=e1079] [cursor=pointer]:
+                - /url: /tools/gift-exchange-quiz
+            - listitem [ref=e1080]:
+              - link "Gift Exchange Rules" [ref=e1081] [cursor=pointer]:
+                - /url: /tools/gift-exchange-rules
+            - listitem [ref=e1082]:
+              - link "Name Randomizer" [ref=e1083] [cursor=pointer]:
+                - /url: /tools/name-randomizer
+            - listitem [ref=e1084]:
+              - link "Random Number Generator" [ref=e1085] [cursor=pointer]:
+                - /url: /tools/random-number-generator
+            - listitem [ref=e1086]:
+              - link "Dice Roller" [ref=e1087] [cursor=pointer]:
+                - /url: /tools/dice-roller
+            - listitem [ref=e1088]:
+              - link "Coin Flip" [ref=e1089] [cursor=pointer]:
+                - /url: /tools/coin-flip
+            - listitem [ref=e1090]:
+              - link "Team Generator" [ref=e1091] [cursor=pointer]:
+                - /url: /tools/team-generator
+            - listitem [ref=e1092]:
+              - link "Christmas Trivia" [ref=e1093] [cursor=pointer]:
+                - /url: /tools/christmas-trivia
+            - listitem [ref=e1094]:
+              - link "Christmas Charades" [ref=e1095] [cursor=pointer]:
+                - /url: /tools/christmas-charades
+            - listitem [ref=e1096]:
+              - link "Holiday Bingo" [ref=e1097] [cursor=pointer]:
+                - /url: /tools/holiday-bingo
+            - listitem [ref=e1098]:
+              - link "Would You Rather" [ref=e1099] [cursor=pointer]:
+                - /url: /tools/would-you-rather
+            - listitem [ref=e1100]:
+              - link "Left Right Center" [ref=e1101] [cursor=pointer]:
+                - /url: /tools/left-right-center
+            - listitem [ref=e1102]:
+              - link "Gift Preference Quiz" [ref=e1103] [cursor=pointer]:
+                - /url: /tools/gift-preference-questionnaire
+        - 'navigation "Footer: Cards & Invitations" [ref=e1104]':
+          - heading "Cards & Invitations" [level=3] [ref=e1105]
+          - list [ref=e1106]:
+            - listitem [ref=e1107]:
+              - link "Card Designs" [ref=e1108] [cursor=pointer]:
+                - /url: /cards/designs
+            - listitem [ref=e1109]:
+              - link "Christmas Cards" [ref=e1110] [cursor=pointer]:
+                - /url: /cards/designs/christmas
+            - listitem [ref=e1111]:
+              - link "Holiday Cards" [ref=e1112] [cursor=pointer]:
+                - /url: /cards/designs/holiday
+            - listitem [ref=e1113]:
+              - link "Thanksgiving Cards" [ref=e1114] [cursor=pointer]:
+                - /url: /cards/designs/thanksgiving
+            - listitem [ref=e1115]:
+              - link "Hanukkah Cards" [ref=e1116] [cursor=pointer]:
+                - /url: /cards/designs/hanukkah
+            - listitem [ref=e1117]:
+              - link "New Year Cards" [ref=e1118] [cursor=pointer]:
+                - /url: /cards/designs/new-year
+            - listitem [ref=e1119]:
+              - link "Holiday Thank You Cards" [ref=e1120] [cursor=pointer]:
+                - /url: /cards/designs/thank-you-holiday
+            - listitem [ref=e1121]:
+              - link "Invitation Designs" [ref=e1122] [cursor=pointer]:
+                - /url: /events/designs
+            - listitem [ref=e1123]:
+              - link "Christmas Invitations" [ref=e1124] [cursor=pointer]:
+                - /url: /events/designs/christmas
+            - listitem [ref=e1125]:
+              - link "Holiday Party Invitations" [ref=e1126] [cursor=pointer]:
+                - /url: /events/designs/holiday
+            - listitem [ref=e1127]:
+              - link "New Year Invitations" [ref=e1128] [cursor=pointer]:
+                - /url: /events/designs/new-year
+        - 'navigation "Footer: General" [ref=e1129]':
+          - heading "General" [level=3] [ref=e1130]
+          - list [ref=e1131]:
+            - listitem [ref=e1132]:
+              - link "How It Works" [ref=e1133] [cursor=pointer]:
+                - /url: /#how-it-works
+            - listitem [ref=e1134]:
+              - link "Find a Wishlist" [ref=e1135] [cursor=pointer]:
+                - /url: /friends/find-friends
+            - listitem [ref=e1136]:
+              - link "Event Invitations" [ref=e1137] [cursor=pointer]:
+                - /url: /events
+            - listitem [ref=e1138]:
+              - link "Secret Santa & Gift Exchange" [ref=e1139] [cursor=pointer]:
+                - /url: /exchange
+            - listitem [ref=e1140]:
+              - link "Send a card" [ref=e1141] [cursor=pointer]:
+                - /url: /cards/designs
+            - listitem [ref=e1142]:
+              - link "Blog" [ref=e1143] [cursor=pointer]:
+                - /url: /blog
+            - listitem [ref=e1144]:
+              - 'link "Genie: AI Gift Finder" [ref=e1145] [cursor=pointer]':
+                - /url: /genie
+            - listitem [ref=e1146]:
+              - link "Browser Extension" [ref=e1147] [cursor=pointer]:
+                - /url: /extension
+            - listitem [ref=e1148]:
+              - link "FAQ" [ref=e1149] [cursor=pointer]:
+                - /url: /faq
+            - listitem [ref=e1150]:
+              - link "Contact Us" [ref=e1151] [cursor=pointer]:
+                - /url: /contact-us
+            - listitem [ref=e1152]:
+              - link "For brands" [ref=e1153] [cursor=pointer]:
+                - /url: /for-brands
+        - complementary [ref=e1154]:
+          - paragraph [ref=e1155]: Get the app
+          - generic [ref=e1156]:
+            - link "Download on the App Store" [ref=e1157] [cursor=pointer]:
+              - /url: https://apps.apple.com/us/app/giftlist-wishlist-registry/id6736836276?utm_source=giftlist_web&utm_medium=badge&utm_campaign=app_install&utm_content=homepage_footer&pt=125683460&ct=homepage_footer&mt=8
+              - img "Download on the App Store" [ref=e1158]
+            - link "Get it on Google Play" [ref=e1159] [cursor=pointer]:
+              - /url: https://play.google.com/store/apps/details?id=com.giftlist&referrer=utm_source%3Dgiftlist_web%26utm_medium%3Dbadge%26utm_campaign%3Dapp_install%26utm_content%3Dhomepage_footer
+              - img "Get it on Google Play" [ref=e1160]
+          - generic [ref=e1161]:
+            - img "Rated 4.8 out of 5 stars" [ref=e1162]
+            - generic [ref=e1173]: "4.8"
+            - generic [aria-hidden] [ref=e1174]: ·
+            - generic [ref=e1175]: 5M+ gifts
+      - generic [ref=e1177]:
+        - generic [ref=e1178]:
+          - generic [ref=e1179]: © 2026 GiftList
+          - generic [aria-hidden] [ref=e1180]: ·
+          - link "Privacy Policy" [ref=e1181] [cursor=pointer]:
+            - /url: /privacy-policy
+          - generic [aria-hidden] [ref=e1182]: ·
+          - link "Terms of Service" [ref=e1183] [cursor=pointer]:
+            - /url: /terms-of-use
+          - generic [aria-hidden] [ref=e1184]: ·
+          - link "Disclaimer" [ref=e1185] [cursor=pointer]:
+            - /url: /disclaimer
+          - button "Switch to dark mode" [ref=e1186] [cursor=pointer]
+        - paragraph [ref=e1193]:
+          - text: "Affiliate disclosure: Some links on this site may be affiliate links. We may earn a small commission if you make a purchase through these links, at no extra cost to you. GiftList is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com."
+          - link "Read our disclaimer" [ref=e1194] [cursor=pointer]:
+            - /url: /disclaimer
+          - text: .
+  - region "Notifications alt+T"
+  - alert [ref=e1195]
+  - button "Get help" [ref=e1196] [cursor=pointer]
