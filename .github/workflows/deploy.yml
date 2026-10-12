@@ -1,0 +1,22 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            cd /var/www/giftlistmaker
+            git fetch origin
+            git reset --hard origin/main
