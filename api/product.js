@@ -8,6 +8,14 @@ const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET || '';
 const CRAWLBASE_TOKEN = process.env.CRAWLBASE_TOKEN || '';
 const SCRAPFLY_KEY = process.env.SCRAPFLY_KEY || '';
 
+const {
+  resolveAffiliateUrl,
+  getAffiliateStatusReport,
+  setManualAffiliateOverride,
+  getManualAffiliateOverrides,
+  STORE_AFFILIATE_CONFIG
+} = require('./affiliate');
+
 // ============================================================================
 // DIAGNOSTIC TEST FLAG: Disable Paid APIs (Crawlbase & Scrapfly)
 // Set to true for purely diagnostic testing of native & client-assisted extraction.
@@ -93,12 +101,17 @@ function renderLogsHtml(logs) {
       ? (l.url || '').slice(0, 40) + '…'
       : (l.url || '');
 
+    const affiliateBadge = l.hasAffiliate
+      ? `<span style="color:#0f5132;background:#d1e7dd;padding:2px 8px;border-radius:4px;font-weight:600;font-size:11px;" title="${l.affiliateUrl || ''}">🔗 Affiliate (${l.affiliateSource || 'active'})</span>`
+      : `<span style="color:#6c757d;background:#e9ecef;padding:2px 8px;border-radius:4px;font-weight:500;font-size:11px;">⚪ Clean URL</span>`;
+
     return `<tr>
       <td style="font-size:12px;white-space:nowrap;">${l.timestamp ? l.timestamp.split('T')[1].split('.')[0] : '—'}</td>
       <td><strong>${l.method}</strong></td>
       <td><span style="background:#f0f2f5;padding:2px 6px;border-radius:3px;font-weight:500;">${l.store || 'Store'}</span></td>
       <td><a href="${l.url}" target="_blank" title="${l.url}" style="color:#0d6efd;text-decoration:none;">${shortUrl}</a></td>
       <td>${sourceBadge}</td>
+      <td style="text-align:center;">${affiliateBadge}</td>
       <td style="text-align:center;">${scoreBadge}</td>
       <td title="${l.title || ''}">${cleanTitle}</td>
       <td>${priceDisplay}</td>
@@ -124,6 +137,7 @@ function renderLogsHtml(logs) {
     .actions { display: flex; gap: 10px; }
     .btn { background: #0d6efd; color: #fff; padding: 6px 14px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; }
     .btn-secondary { background: #6c757d; }
+    .btn-success { background: #198754; }
     .btn-danger { background: #dc3545; }
     table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
     th { text-align: left; padding: 10px; background: #f1f3f5; border-bottom: 2px solid #dee2e6; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -138,6 +152,7 @@ function renderLogsHtml(logs) {
       <span>🧪 Diagnostic Request Logs (${logs.length} / ${MAX_LOGS})</span>
       <div class="actions">
         <a href="?logs=1&format=html" class="btn">Refresh</a>
+        <a href="?affiliate=1" class="btn btn-success" target="_blank">Affiliate Status</a>
         <a href="?logs=1" class="btn btn-secondary" target="_blank">View JSON</a>
         <a href="?clearLogs=1" class="btn btn-danger" onclick="return confirm('Clear logs?')">Clear Logs</a>
       </div>
@@ -159,6 +174,7 @@ function renderLogsHtml(logs) {
             <th>Store</th>
             <th>Target URL</th>
             <th>Source</th>
+            <th>Affiliate</th>
             <th>Score</th>
             <th>Resolved Title</th>
             <th>Price</th>
@@ -1097,6 +1113,23 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ success: true, message: 'In-memory request logs cleared' });
   }
 
+  // Affiliate System Diagnostic & Configuration Endpoints
+  if (req.query.affiliate === '1' || req.query.affiliateReport === '1') {
+    return res.status(200).json({
+      success: true,
+      ...getAffiliateStatusReport()
+    });
+  }
+
+  if (req.query.setAffiliate === '1' && req.query.key && req.query.affiliateUrl) {
+    setManualAffiliateOverride(req.query.key, req.query.affiliateUrl);
+    return res.status(200).json({
+      success: true,
+      message: `Manual affiliate override registered for key "${req.query.key}"`,
+      overrides: getManualAffiliateOverrides()
+    });
+  }
+
   const startTime = Date.now();
   const rawClientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '';
   const clientIp = rawClientIp.split(',')[0].trim() || 'unknown';
@@ -1119,6 +1152,7 @@ module.exports = async function handler(req, res) {
 
   const clientHtml = (body?.html && typeof body.html === 'string') ? body.html : null;
   const isDebug = (body?.debug === '1' || req.query.debug === '1');
+  const forceNoAffiliate = (req.query.affiliate === 'false' || body?.affiliate === false);
   const ebaySearch = body?.ebaySearch || req.query.ebaySearch;
   const debugInfo = {};
 
@@ -1165,6 +1199,12 @@ module.exports = async function handler(req, res) {
       debugInfo.hasEbaySecret = Boolean(EBAY_CLIENT_SECRET);
       try {
         const ebayData = await resolveEbayProduct(ebayItemId, targetUrl);
+        const ebayAff = resolveAffiliateUrl(targetUrl, 'eBay', forceNoAffiliate);
+        ebayData.url = ebayAff.cleanUrl;
+        ebayData.affiliateUrl = ebayAff.affiliateUrl;
+        ebayData.hasAffiliate = ebayAff.hasAffiliate;
+        ebayData.affiliateSource = ebayAff.source;
+
         const durationMs = Date.now() - startTime;
         recordRequestLog({
           method: req.method,
@@ -1173,6 +1213,9 @@ module.exports = async function handler(req, res) {
           clientIp,
           clientHtmlLength: clientHtml ? clientHtml.length : 0,
           source: 'ebay-browse-api',
+          hasAffiliate: ebayData.hasAffiliate,
+          affiliateSource: ebayData.affiliateSource,
+          affiliateUrl: ebayData.affiliateUrl,
           crawlbaseTriggered: false,
           crawlbaseMode: null,
           crawlbaseStatus: null,
@@ -1184,7 +1227,7 @@ module.exports = async function handler(req, res) {
           success: true,
           error: null
         });
-        console.log(`[REQ] ${req.method} eBay - ${ebayData.title?.slice(0, 30)} - $${ebayData.price} (${durationMs}ms)`);
+        console.log(`[REQ] ${req.method} eBay - ${ebayData.title?.slice(0, 30)} - $${ebayData.price} | Affiliate: ${ebayData.hasAffiliate ? 'YES' : 'NO'} (${durationMs}ms)`);
         if (isDebug) ebayData.debug = debugInfo;
         return res.status(200).json(ebayData);
       } catch (ebayErr) {
@@ -1377,6 +1420,13 @@ module.exports = async function handler(req, res) {
     const hasValidImage = Boolean(result.imageUrl && result.imageUrl.length > 10);
     const paramsScore = `${(hasValidTitle ? 1 : 0) + (hasValidPrice ? 1 : 0) + (hasValidImage ? 1 : 0)}/3`;
 
+    // Master Affiliate Resolution across all six stores
+    const affInfo = resolveAffiliateUrl(targetUrl, result.storeName, forceNoAffiliate);
+    result.url = affInfo.cleanUrl;
+    result.affiliateUrl = affInfo.affiliateUrl;
+    result.hasAffiliate = affInfo.hasAffiliate;
+    result.affiliateSource = affInfo.source;
+
     const durationMs = Date.now() - startTime;
     const logObj = {
       method: req.method,
@@ -1385,6 +1435,9 @@ module.exports = async function handler(req, res) {
       clientIp,
       clientHtmlLength: clientHtml ? clientHtml.length : 0,
       source: result.source || debugInfo.source || (clientHtml ? 'client-assisted-edge-fetch' : 'server-direct'),
+      hasAffiliate: result.hasAffiliate,
+      affiliateSource: result.affiliateSource,
+      affiliateUrl: result.affiliateUrl,
       paidApisStatus: DISABLE_PAID_FALLBACKS ? 'DISABLED' : 'ENABLED',
       crawlbaseTriggered: Boolean(debugInfo.crawlbaseTriggered),
       crawlbaseMode: debugInfo.crawlbaseMode || null,
@@ -1403,7 +1456,7 @@ module.exports = async function handler(req, res) {
       error: null
     };
     recordRequestLog(logObj);
-    console.log(`[REQ] ${req.method} ${result.storeName || 'Store'} | Score: ${paramsScore} | Mobile: ${clientHtml ? 'YES' : 'NO'} | Title: ${hasValidTitle ? 'YES' : 'NO'} | Price: ${hasValidPrice ? '$' + result.price : 'NO'} | Image: ${hasValidImage ? 'YES' : 'NO'} (${durationMs}ms)`);
+    console.log(`[REQ] ${req.method} ${result.storeName || 'Store'} | Score: ${paramsScore} | Affiliate: ${result.hasAffiliate ? 'YES (' + result.affiliateSource + ')' : 'NO'} | Title: ${hasValidTitle ? 'YES' : 'NO'} | Price: ${hasValidPrice ? '$' + result.price : 'NO'} | Image: ${hasValidImage ? 'YES' : 'NO'} (${durationMs}ms)`);
 
     if (isDebug) result.debug = debugInfo;
     return res.status(200).json(result);
